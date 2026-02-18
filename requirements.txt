@@ -47,6 +47,7 @@ osmnx==2.1.0
 packaging==26.0
 pandas==2.3.3
 parso==0.8.5
+pathlib==1.0.1
 patsy==1.0.2
 pillow==12.1.0
 platformdirs==4.5.1
