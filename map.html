@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_1e53f9cfdf4b1e3d6f323790d1f00487 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    
+                    <style>
+                        .foliumtooltip {
+                            
+                        }
+                       .foliumtooltip table{
+                            margin: auto;
+                        }
+                        .foliumtooltip tr{
+                            text-align: left;
+                        }
+                        .foliumtooltip th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_1e53f9cfdf4b1e3d6f323790d1f00487" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_1e53f9cfdf4b1e3d6f323790d1f00487 = L.map(
+                "map_1e53f9cfdf4b1e3d6f323790d1f00487",
+                {
+                    center: [50.11028090000001, 19.8430082],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 10,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+            L.control.scale().addTo(map_1e53f9cfdf4b1e3d6f323790d1f00487);
+
+            
+
+        
+    
+            var tile_layer_b385bee1db0e51058e681f9358404ab4 = L.tileLayer(
+                "https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1Ijoia2phbHYiLCJhIjoiY21lbWk5N3BqMG9xazJpczlxdTZyb2xueiJ9._l4sMzp9t6JVxx1ESh6EBQ",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "\u00a9 Mapbox \u00a9 OpenStreetMap",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_b385bee1db0e51058e681f9358404ab4.addTo(map_1e53f9cfdf4b1e3d6f323790d1f00487);
+        
+    
+            map_1e53f9cfdf4b1e3d6f323790d1f00487.fitBounds(
+                [[49.9952554, 19.6478056], [50.22530640000001, 20.0382108]],
+                {}
+            );
+        
+    
+        function geo_json_2990d979261eb11fd5c3b9f7302b8732_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"fillOpacity": 0.5, "weight": 2};
+            }
+        }
+        function geo_json_2990d979261eb11fd5c3b9f7302b8732_highlighter(feature) {
+            switch(feature.id) {
+                default:
+                    return {"fillOpacity": 0.75};
+            }
+        }
+        function geo_json_2990d979261eb11fd5c3b9f7302b8732_pointToLayer(feature, latlng) {
+            var opts = {
+  "stroke": true,
+  "color": "#3388ff",
+  "weight": 3,
+  "opacity": 1.0,
+  "lineCap": "round",
+  "lineJoin": "round",
+  "dashArray": null,
+  "dashOffset": null,
+  "fill": true,
+  "fillColor": "#3388ff",
+  "fillOpacity": 0.2,
+  "fillRule": "evenodd",
+  "bubblingMouseEvents": true,
+  "radius": 10,
+};
+            
+            let style = geo_json_2990d979261eb11fd5c3b9f7302b8732_styler(feature)
+            Object.assign(opts, style)
+            
+            return new L.CircleMarker(latlng, opts)
+        }
+
+        function geo_json_2990d979261eb11fd5c3b9f7302b8732_onEachFeature(feature, layer) {
+
+            layer.on({
+                mouseout: function(e) {
+                    if(typeof e.target.setStyle === "function"){
+                            geo_json_2990d979261eb11fd5c3b9f7302b8732.resetStyle(e.target);
+                    }
+                },
+                mouseover: function(e) {
+                    if(typeof e.target.setStyle === "function"){
+                        const highlightStyle = geo_json_2990d979261eb11fd5c3b9f7302b8732_highlighter(e.target.feature)
+                        e.target.setStyle(highlightStyle);
+                    }
+                },
+            });
+        };
+        var geo_json_2990d979261eb11fd5c3b9f7302b8732 = L.geoJson(null, {
+                onEachFeature: geo_json_2990d979261eb11fd5c3b9f7302b8732_onEachFeature,
+            
+                style: geo_json_2990d979261eb11fd5c3b9f7302b8732_styler,
+                pointToLayer: geo_json_2990d979261eb11fd5c3b9f7302b8732_pointToLayer,
+            ...{
+}
+        });
+
+        function geo_json_2990d979261eb11fd5c3b9f7302b8732_add (data) {
+            geo_json_2990d979261eb11fd5c3b9f7302b8732
+                .addData(data);
+        }
+            geo_json_2990d979261eb11fd5c3b9f7302b8732_add({"bbox": [19.6478056, 49.9952554, 20.0382108, 50.22530640000001], "features": [{"bbox": [19.9336431, 50.053143199999994, 19.9336431, 50.053143199999994], "geometry": {"coordinates": [19.9336431, 50.053143199999994], "type": "Point"}, "id": "0", "properties": {"name": "Smocza Jama"}, "type": "Feature"}, {"bbox": [19.9008795, 50.0394416, 19.9008795, 50.0394416], "geometry": {"coordinates": [19.9008795, 50.0394416], "type": "Point"}, "id": "1", "properties": {"name": "Jaskinia Jasna"}, "type": "Feature"}, {"bbox": [19.7745318, 50.19395, 19.7745318, 50.19395], "geometry": {"coordinates": [19.7745318, 50.19395], "type": "Point"}, "id": "2", "properties": {"name": "Jaskinia Nietoperzowa"}, "type": "Feature"}, {"bbox": [19.8633378, 50.0314381, 19.8633378, 50.0314381], "geometry": {"coordinates": [19.8633378, 50.0314381], "type": "Point"}, "id": "3", "properties": {"name": "Kawerna Kostrze"}, "type": "Feature"}, {"bbox": [19.8588554, 50.0306324, 19.8588554, 50.0306324], "geometry": {"coordinates": [19.8588554, 50.0306324], "type": "Point"}, "id": "4", "properties": {"name": "Kawerna Pod Kapliczk\u0105"}, "type": "Feature"}, {"bbox": [19.858328, 50.0358862, 19.858328, 50.0358862], "geometry": {"coordinates": [19.858328, 50.0358862], "type": "Point"}, "id": "5", "properties": {"name": "Kawerna Wielkanoc"}, "type": "Feature"}, {"bbox": [19.8693934, 50.03416260000001, 19.8693934, 50.03416260000001], "geometry": {"coordinates": [19.8693934, 50.03416260000001], "type": "Point"}, "id": "6", "properties": {"name": "Kawerna Bodz\u00f3w 5"}, "type": "Feature"}, {"bbox": [19.883940400000004, 50.03419679999999, 19.883940400000004, 50.03419679999999], "geometry": {"coordinates": [19.883940400000004, 50.03419679999999], "type": "Point"}, "id": "7", "properties": {"name": "Kawerna Pychowice I"}, "type": "Feature"}, {"bbox": [19.8844917, 50.0339322, 19.8844917, 50.0339322], "geometry": {"coordinates": [19.8844917, 50.0339322], "type": "Point"}, "id": "8", "properties": {"name": "Kawerna Pychowice I"}, "type": "Feature"}, {"bbox": [19.7036299, 50.1649772, 19.7036299, 50.1649772], "geometry": {"coordinates": [19.7036299, 50.1649772], "type": "Point"}, "id": "9", "properties": {"name": "Jaskinia \u017barska"}, "type": "Feature"}, {"bbox": [19.8188973, 50.201632799999985, 19.8188973, 50.201632799999985], "geometry": {"coordinates": [19.8188973, 50.201632799999985], "type": "Point"}, "id": "10", "properties": {"name": "Grota \u0141okietka"}, "type": "Feature"}, {"bbox": [19.9185889, 50.131533100000006, 19.9185889, 50.131533100000006], "geometry": {"coordinates": [19.9185889, 50.131533100000006], "type": "Point"}, "id": "11", "properties": {"name": "Jaskinia Zielonkowska"}, "type": "Feature"}, {"bbox": [19.8317497, 50.19684289999999, 19.8317497, 50.19684289999999], "geometry": {"coordinates": [19.8317497, 50.19684289999999], "type": "Point"}, "id": "12", "properties": {"name": "Jaskinia Ciemna"}, "type": "Feature"}, {"bbox": [19.8066183, 50.174700200000004, 19.8066183, 50.174700200000004], "geometry": {"coordinates": [19.8066183, 50.174700200000004], "type": "Point"}, "id": "13", "properties": {"name": "Jaskinia Wierzchowska G\u00f3rna"}, "type": "Feature"}, {"bbox": [19.8057149, 50.1703913, 19.8057149, 50.1703913], "geometry": {"coordinates": [19.8057149, 50.1703913], "type": "Point"}, "id": "14", "properties": {"name": "Jaskinia Mamutowa"}, "type": "Feature"}, {"bbox": [19.8063181, 50.17317119999999, 19.8063181, 50.17317119999999], "geometry": {"coordinates": [19.8063181, 50.17317119999999], "type": "Point"}, "id": "15", "properties": {"name": "Jaskinia Dzika"}, "type": "Feature"}, {"bbox": [19.8068457, 50.17492109999999, 19.8068457, 50.17492109999999], "geometry": {"coordinates": [19.8068457, 50.17492109999999], "type": "Point"}, "id": "16", "properties": {"name": "Jaskinia Wierzchowska G\u00f3rna"}, "type": "Feature"}, {"bbox": [19.8490832, 50.14082559999999, 19.8490832, 50.14082559999999], "geometry": {"coordinates": [19.8490832, 50.14082559999999], "type": "Point"}, "id": "17", "properties": {"name": "Jaskinia Borsucza"}, "type": "Feature"}, {"bbox": [19.7795768, 50.1919851, 19.7795768, 50.1919851], "geometry": {"coordinates": [19.7795768, 50.1919851], "type": "Point"}, "id": "18", "properties": {"name": "Jaskinia na Tomasz\u00f3wkach"}, "type": "Feature"}, {"bbox": [19.7727296, 50.19060360000001, 19.7727296, 50.19060360000001], "geometry": {"coordinates": [19.7727296, 50.19060360000001], "type": "Point"}, "id": "19", "properties": {"name": "Jaskinia \u0141abajowa"}, "type": "Feature"}, {"bbox": [19.7893397, 50.013007599999995, 19.7893397, 50.013007599999995], "geometry": {"coordinates": [19.7893397, 50.013007599999995], "type": "Point"}, "id": "20", "properties": {"name": "Spyrlaczowa Jama"}, "type": "Feature"}, {"bbox": [19.8348776, 50.18069279999999, 19.8348776, 50.18069279999999], "geometry": {"coordinates": [19.8348776, 50.18069279999999], "type": "Point"}, "id": "21", "properties": {"name": "Dziurawiec"}, "type": "Feature"}, {"bbox": [19.7077559, 50.0653399, 19.7077559, 50.0653399], "geometry": {"coordinates": [19.7077559, 50.0653399], "type": "Point"}, "id": "22", "properties": {"name": "Jaskinia nad Matk\u0105 Bosk\u0105"}, "type": "Feature"}, {"bbox": [19.7058023, 50.072193899999995, 19.7058023, 50.072193899999995], "geometry": {"coordinates": [19.7058023, 50.072193899999995], "type": "Point"}, "id": "23", "properties": {"name": "Jaskinia na \u0141opiankach"}, "type": "Feature"}, {"bbox": [19.7549951, 50.1562945, 19.7549951, 50.1562945], "geometry": {"coordinates": [19.7549951, 50.1562945], "type": "Point"}, "id": "24", "properties": {"name": "Gara\u017c"}, "type": "Feature"}, {"bbox": [19.9158179, 50.039715099999995, 19.9158179, 50.039715099999995], "geometry": {"coordinates": [19.9158179, 50.039715099999995], "type": "Point"}, "id": "25", "properties": {"name": "Kawerna Magazyn"}, "type": "Feature"}, {"bbox": [19.8357061, 50.1921577, 19.8357061, 50.1921577], "geometry": {"coordinates": [19.8357061, 50.1921577], "type": "Point"}, "id": "26", "properties": {"name": "Jaskinia Okopy Wielka Dolna"}, "type": "Feature"}, {"bbox": [19.8350288, 50.191596999999994, 19.8350288, 50.191596999999994], "geometry": {"coordinates": [19.8350288, 50.191596999999994], "type": "Point"}, "id": "27", "properties": {"name": "Jaskinia Okopy Wielka G\u00f3rna"}, "type": "Feature"}, {"bbox": [19.9024457, 50.03892259999999, 19.9024457, 50.03892259999999], "geometry": {"coordinates": [19.9024457, 50.03892259999999], "type": "Point"}, "id": "28", "properties": {"name": "Grota Twardowskiego"}, "type": "Feature"}, {"bbox": [19.8291173, 50.22530640000001, 19.8291173, 50.22530640000001], "geometry": {"coordinates": [19.8291173, 50.22530640000001], "type": "Point"}, "id": "29", "properties": {"name": "Jaskinia nad Mosurem Starym"}, "type": "Feature"}, {"bbox": [19.8063026, 50.17406729999998, 19.8063026, 50.17406729999998], "geometry": {"coordinates": [19.8063026, 50.17406729999998], "type": "Point"}, "id": "30", "properties": {"name": "Jaskinia Wierzchowska G\u00f3rna"}, "type": "Feature"}, {"bbox": [19.6967676, 50.09971819999999, 19.6967676, 50.09971819999999], "geometry": {"coordinates": [19.6967676, 50.09971819999999], "type": "Point"}, "id": "31", "properties": {"name": "Pa\u0144skie K\u0105ty"}, "type": "Feature"}, {"bbox": [19.6692599, 50.03183940000001, 19.6692599, 50.03183940000001], "geometry": {"coordinates": [19.6692599, 50.03183940000001], "type": "Point"}, "id": "32", "properties": {"name": "Jaskinia Przegi\u0144ska"}, "type": "Feature"}, {"bbox": [19.8989656, 50.0366236, 19.8989656, 50.0366236], "geometry": {"coordinates": [19.8989656, 50.0366236], "type": "Point"}, "id": "33", "properties": {"name": "Jaskinia Pychowicka"}, "type": "Feature"}, {"bbox": [19.8814032, 50.0327983, 19.8814032, 50.0327983], "geometry": {"coordinates": [19.8814032, 50.0327983], "type": "Point"}, "id": "34", "properties": {"name": "Kawerna Pychowice III"}, "type": "Feature"}, {"bbox": [19.881594, 50.032571399999995, 19.881594, 50.032571399999995], "geometry": {"coordinates": [19.881594, 50.032571399999995], "type": "Point"}, "id": "35", "properties": {"name": "Kawerna Pychowice II"}, "type": "Feature"}, {"bbox": [19.9146992, 50.039931, 19.9146992, 50.039931], "geometry": {"coordinates": [19.9146992, 50.039931], "type": "Point"}, "id": "36", "properties": {"name": "Jaskinia Musza"}, "type": "Feature"}, {"bbox": [19.91716, 50.0399049, 19.91716, 50.0399049], "geometry": {"coordinates": [19.91716, 50.0399049], "type": "Point"}, "id": "37", "properties": {"name": "Rurka"}, "type": "Feature"}, {"bbox": [19.9136094, 50.051637799999995, 19.9136094, 50.051637799999995], "geometry": {"coordinates": [19.9136094, 50.051637799999995], "type": "Point"}, "id": "38", "properties": {"name": "Schronisko pod Klasztorem Norbertanek"}, "type": "Feature"}, {"bbox": [19.8048883, 50.2035071, 19.8048883, 50.2035071], "geometry": {"coordinates": [19.8048883, 50.2035071], "type": "Point"}, "id": "39", "properties": {"name": "Bia\u0142a"}, "type": "Feature"}, {"bbox": [19.8320139, 50.21284900000001, 19.8320139, 50.21284900000001], "geometry": {"coordinates": [19.8320139, 50.21284900000001], "type": "Point"}, "id": "40", "properties": {"name": "Dziurawiec"}, "type": "Feature"}, {"bbox": [19.7988461, 50.2106155, 19.7988461, 50.2106155], "geometry": {"coordinates": [19.7988461, 50.2106155], "type": "Point"}, "id": "41", "properties": {"name": "G\u00f3ralska"}, "type": "Feature"}, {"bbox": [19.8029828, 50.203139499999985, 19.8029828, 50.203139499999985], "geometry": {"coordinates": [19.8029828, 50.203139499999985], "type": "Point"}, "id": "42", "properties": {"name": "Jama Ani"}, "type": "Feature"}, {"bbox": [19.824236, 50.201679899999995, 19.824236, 50.201679899999995], "geometry": {"coordinates": [19.824236, 50.201679899999995], "type": "Point"}, "id": "43", "properties": {"name": "Jama Ma\u0142a"}, "type": "Feature"}, {"bbox": [19.7961328, 50.21911089999999, 19.7961328, 50.21911089999999], "geometry": {"coordinates": [19.7961328, 50.21911089999999], "type": "Point"}, "id": "44", "properties": {"name": "Koziarnia"}, "type": "Feature"}, {"bbox": [19.8061607, 50.20390160000001, 19.8061607, 50.20390160000001], "geometry": {"coordinates": [19.8061607, 50.20390160000001], "type": "Point"}, "id": "45", "properties": {"name": "Krakowska"}, "type": "Feature"}, {"bbox": [19.8289049, 50.1968259, 19.8289049, 50.1968259], "geometry": {"coordinates": [19.8289049, 50.1968259], "type": "Point"}, "id": "46", "properties": {"name": "Krowia"}, "type": "Feature"}, {"bbox": [19.8374221, 50.189470799999995, 19.8374221, 50.189470799999995], "geometry": {"coordinates": [19.8374221, 50.189470799999995], "type": "Point"}, "id": "47", "properties": {"name": "Puchacza"}, "type": "Feature"}, {"bbox": [19.808600900000002, 50.20544009999999, 19.808600900000002, 50.20544009999999], "geometry": {"coordinates": [19.808600900000002, 50.20544009999999], "type": "Point"}, "id": "48", "properties": {"name": "Pustelnia"}, "type": "Feature"}, {"bbox": [19.7964557, 50.22048399999999, 19.7964557, 50.22048399999999], "geometry": {"coordinates": [19.7964557, 50.22048399999999], "type": "Point"}, "id": "49", "properties": {"name": "Sadlana"}, "type": "Feature"}, {"bbox": [19.810575, 50.20621330000001, 19.810575, 50.20621330000001], "geometry": {"coordinates": [19.810575, 50.20621330000001], "type": "Point"}, "id": "50", "properties": {"name": "Jaskinia S\u0105spowska"}, "type": "Feature"}, {"bbox": [19.8130553, 50.20752499999999, 19.8130553, 50.20752499999999], "geometry": {"coordinates": [19.8130553, 50.20752499999999], "type": "Point"}, "id": "51", "properties": {"name": "Wylotne"}, "type": "Feature"}, {"bbox": [19.8136983, 50.20495919999998, 19.8136983, 50.20495919999998], "geometry": {"coordinates": [19.8136983, 50.20495919999998], "type": "Point"}, "id": "52", "properties": {"name": "Zb\u00f3jecka"}, "type": "Feature"}, {"bbox": [19.8099563, 50.20406340000001, 19.8099563, 50.20406340000001], "geometry": {"coordinates": [19.8099563, 50.20406340000001], "type": "Point"}, "id": "53", "properties": {"name": "Z\u0142odziejska"}, "type": "Feature"}, {"bbox": [19.8014595, 50.1860449, 19.8014595, 50.1860449], "geometry": {"coordinates": [19.8014595, 50.1860449], "type": "Point"}, "id": "54", "properties": {"name": "\u017bytnia"}, "type": "Feature"}, {"bbox": [19.7031826, 50.164905699999984, 19.7031826, 50.164905699999984], "geometry": {"coordinates": [19.7031826, 50.164905699999984], "type": "Point"}, "id": "55", "properties": {"name": "Jaskinia bez Nazwy"}, "type": "Feature"}, {"bbox": [19.8007235, 50.04140840000001, 19.8007235, 50.04140840000001], "geometry": {"coordinates": [19.8007235, 50.04140840000001], "type": "Point"}, "id": "56", "properties": {"name": "Jaskinia Kryspinowska"}, "type": "Feature"}, {"bbox": [19.9031087, 50.0393236, 19.9031087, 50.0393236], "geometry": {"coordinates": [19.9031087, 50.0393236], "type": "Point"}, "id": "57", "properties": {"name": "Okienko Zb\u00f3jnickie"}, "type": "Feature"}, {"bbox": [19.8924044, 50.05654899999998, 19.8924044, 50.05654899999998], "geometry": {"coordinates": [19.8924044, 50.05654899999998], "type": "Point"}, "id": "58", "properties": {"name": "Kawerna Ko\u015bciuszko"}, "type": "Feature"}, {"bbox": [19.8196666, 50.1546667, 19.8196666, 50.1546667], "geometry": {"coordinates": [19.8196666, 50.1546667], "type": "Point"}, "id": "59", "properties": {"name": "Szczelina w Szerokiej"}, "type": "Feature"}, {"bbox": [19.7661111, 50.16250000000001, 19.7661111, 50.16250000000001], "geometry": {"coordinates": [19.7661111, 50.16250000000001], "type": "Point"}, "id": "60", "properties": {"name": "Schronisko na Kawcu"}, "type": "Feature"}, {"bbox": [19.738299, 50.14892699999999, 19.738299, 50.14892699999999], "geometry": {"coordinates": [19.738299, 50.14892699999999], "type": "Point"}, "id": "61", "properties": {"name": "Schronisko w \u0141\u0105czkach II"}, "type": "Feature"}, {"bbox": [19.7683333, 50.18916669999999, 19.7683333, 50.18916669999999], "geometry": {"coordinates": [19.7683333, 50.18916669999999], "type": "Point"}, "id": "62", "properties": {"name": "Tunel po\u015bredni w Wielkiej Skale"}, "type": "Feature"}, {"bbox": [19.7453056, 50.175194399999995, 19.7453056, 50.175194399999995], "geometry": {"coordinates": [19.7453056, 50.175194399999995], "type": "Point"}, "id": "63", "properties": {"name": "Grota z Drzewem"}, "type": "Feature"}, {"bbox": [19.9145721, 50.0406198, 19.9145721, 50.0406198], "geometry": {"coordinates": [19.9145721, 50.0406198], "type": "Point"}, "id": "64", "properties": {"name": "Jaskinia przed \u201eProblem\u00f3wk\u0105\u201d"}, "type": "Feature"}, {"bbox": [19.9137218, 50.04005509999999, 19.9137218, 50.04005509999999], "geometry": {"coordinates": [19.9137218, 50.04005509999999], "type": "Point"}, "id": "65", "properties": {"name": "Jaskinia Koguta"}, "type": "Feature"}, {"bbox": [19.9017713, 50.0388185, 19.9017713, 50.0388185], "geometry": {"coordinates": [19.9017713, 50.0388185], "type": "Point"}, "id": "66", "properties": {"name": "Jaskinia pod Ny\u017c\u0105"}, "type": "Feature"}, {"bbox": [19.916882, 50.0404658, 19.916882, 50.0404658], "geometry": {"coordinates": [19.916882, 50.0404658], "type": "Point"}, "id": "67", "properties": {"name": "Jaskinia w Anastomozach"}, "type": "Feature"}, {"bbox": [19.9010465, 50.0387161, 19.9010465, 50.0387161], "geometry": {"coordinates": [19.9010465, 50.0387161], "type": "Point"}, "id": "68", "properties": {"name": "Jaskinia z Kulkami"}, "type": "Feature"}, {"bbox": [19.9158677, 50.040821699999995, 19.9158677, 50.040821699999995], "geometry": {"coordinates": [19.9158677, 50.040821699999995], "type": "Point"}, "id": "69", "properties": {"name": "Schronisko nad \"Sadyst\u00f3wk\u0105\""}, "type": "Feature"}, {"bbox": [19.8988847, 50.0369449, 19.8988847, 50.0369449], "geometry": {"coordinates": [19.8988847, 50.0369449], "type": "Point"}, "id": "70", "properties": {"name": "Tunel w Pychowicach"}, "type": "Feature"}, {"bbox": [19.9020301, 50.03885139999999, 19.9020301, 50.03885139999999], "geometry": {"coordinates": [19.9020301, 50.03885139999999], "type": "Point"}, "id": "71", "properties": {"name": "Jaskinia Niska"}, "type": "Feature"}, {"bbox": [19.9006976, 50.03886419999999, 19.9006976, 50.03886419999999], "geometry": {"coordinates": [19.9006976, 50.03886419999999], "type": "Point"}, "id": "72", "properties": {"name": "Jaskinia Wywiew"}, "type": "Feature"}, {"bbox": [19.8709331, 50.03450169999999, 19.8709331, 50.03450169999999], "geometry": {"coordinates": [19.8709331, 50.03450169999999], "type": "Point"}, "id": "73", "properties": {"name": "Jaskinia pod Fortem"}, "type": "Feature"}, {"bbox": [19.6646074, 50.19028539999999, 19.6646074, 50.19028539999999], "geometry": {"coordinates": [19.6646074, 50.19028539999999], "type": "Point"}, "id": "74", "properties": {"name": "Jaskinia Rac\u0142awicka (Grzmi\u0105czka)"}, "type": "Feature"}, {"bbox": [19.869277, 50.0345681, 19.869277, 50.0345681], "geometry": {"coordinates": [19.869277, 50.0345681], "type": "Point"}, "id": "75", "properties": {"name": "Kawerna Bodz\u00f3w 4"}, "type": "Feature"}, {"bbox": [19.8690302, 50.034457999999994, 19.8690302, 50.034457999999994], "geometry": {"coordinates": [19.8690302, 50.034457999999994], "type": "Point"}, "id": "76", "properties": {"name": "Kawerna Bodz\u00f3w 3"}, "type": "Feature"}, {"bbox": [19.8688807, 50.034444199999996, 19.8688807, 50.034444199999996], "geometry": {"coordinates": [19.8688807, 50.034444199999996], "type": "Point"}, "id": "77", "properties": {"name": "Kawerna Bodz\u00f3w 2"}, "type": "Feature"}, {"bbox": [19.8685716, 50.03439809999999, 19.8685716, 50.03439809999999], "geometry": {"coordinates": [19.8685716, 50.03439809999999], "type": "Point"}, "id": "78", "properties": {"name": "Kawerna Bodz\u00f3w 1"}, "type": "Feature"}, {"bbox": [19.8688928, 50.0340732, 19.8688928, 50.0340732], "geometry": {"coordinates": [19.8688928, 50.0340732], "type": "Point"}, "id": "79", "properties": {"name": "Kawerna Bodz\u00f3w 6"}, "type": "Feature"}, {"bbox": [19.788606700000003, 50.181169, 19.788606700000003, 50.181169], "geometry": {"coordinates": [19.788606700000003, 50.181169], "type": "Point"}, "id": "80", "properties": {"name": "Schronisko B\u0119dkowskie G\u00f3rne"}, "type": "Feature"}, {"bbox": [19.7885008, 50.18124259999999, 19.7885008, 50.18124259999999], "geometry": {"coordinates": [19.7885008, 50.18124259999999], "type": "Point"}, "id": "81", "properties": {"name": "Schronisko B\u0119b\u0142owskie Dolne"}, "type": "Feature"}, {"bbox": [19.7492938, 50.185350899999996, 19.7492938, 50.185350899999996], "geometry": {"coordinates": [19.7492938, 50.185350899999996], "type": "Point"}, "id": "82", "properties": {"name": "Jaskinia Dziewicza"}, "type": "Feature"}, {"bbox": [19.8364199, 50.0394885, 19.8364199, 50.0394885], "geometry": {"coordinates": [19.8364199, 50.0394885], "type": "Point"}, "id": "83", "properties": {"name": "Kawerna Bielany"}, "type": "Feature"}, {"bbox": [19.8596905, 50.02217149999999, 19.8596905, 50.02217149999999], "geometry": {"coordinates": [19.8596905, 50.02217149999999], "type": "Point"}, "id": "84", "properties": {"name": "Kawerna Winnica II"}, "type": "Feature"}, {"bbox": [19.8612299, 50.0220335, 19.8612299, 50.0220335], "geometry": {"coordinates": [19.8612299, 50.0220335], "type": "Point"}, "id": "85", "properties": {"name": "Kawerna Winnica I"}, "type": "Feature"}, {"bbox": [20.0382108, 50.0960865, 20.0382108, 50.0960865], "geometry": {"coordinates": [20.0382108, 50.0960865], "type": "Point"}, "id": "86", "properties": {"name": "Kawerna D\u0142ubnia"}, "type": "Feature"}, {"bbox": [19.9463949, 50.10604880000001, 19.9463949, 50.10604880000001], "geometry": {"coordinates": [19.9463949, 50.10604880000001], "type": "Point"}, "id": "87", "properties": {"name": "Kawerna Witkowice"}, "type": "Feature"}, {"bbox": [19.9867545, 49.9952554, 19.9867545, 49.9952554], "geometry": {"coordinates": [19.9867545, 49.9952554], "type": "Point"}, "id": "88", "properties": {"name": "Kawerna Kosocice"}, "type": "Feature"}, {"bbox": [19.7950132, 50.018002800000005, 19.7950132, 50.018002800000005], "geometry": {"coordinates": [19.7950132, 50.018002800000005], "type": "Point"}, "id": "89", "properties": {"name": "Kawernia w Piekarach"}, "type": "Feature"}, {"bbox": [19.7383147, 50.148936799999994, 19.7383147, 50.148936799999994], "geometry": {"coordinates": [19.7383147, 50.148936799999994], "type": "Point"}, "id": "90", "properties": {"name": "Schronisko w \u0141\u0105czkach III"}, "type": "Feature"}, {"bbox": [19.738283500000005, 50.1489302, 19.738283500000005, 50.1489302], "geometry": {"coordinates": [19.738283500000005, 50.1489302], "type": "Point"}, "id": "91", "properties": {"name": "Schronisko w \u0141\u0105czkach I"}, "type": "Feature"}, {"bbox": [19.6776462, 50.1737136, 19.6776462, 50.1737136], "geometry": {"coordinates": [19.6776462, 50.1737136], "type": "Point"}, "id": "92", "properties": {"name": "Schronisko K_Sandry"}, "type": "Feature"}, {"bbox": [19.848284, 50.176558199999995, 19.848284, 50.176558199999995], "geometry": {"coordinates": [19.848284, 50.176558199999995], "type": "Point"}, "id": "93", "properties": {"name": "Jaskinia Zamieszka\u0142a Du\u017ca"}, "type": "Feature"}, {"bbox": [19.8489029, 50.175398900000005, 19.8489029, 50.175398900000005], "geometry": {"coordinates": [19.8489029, 50.175398900000005], "type": "Point"}, "id": "94", "properties": {"name": null}, "type": "Feature"}, {"bbox": [19.8090121, 50.1765979, 19.8090121, 50.1765979], "geometry": {"coordinates": [19.8090121, 50.1765979], "type": "Point"}, "id": "95", "properties": {"name": "Schronisko w Kamienio\u0142omie"}, "type": "Feature"}, {"bbox": [19.6746135, 50.0662978, 19.6746135, 50.0662978], "geometry": {"coordinates": [19.6746135, 50.0662978], "type": "Point"}, "id": "96", "properties": {"name": null}, "type": "Feature"}, {"bbox": [19.6778986, 50.0921943, 19.6778986, 50.0921943], "geometry": {"coordinates": [19.6778986, 50.0921943], "type": "Point"}, "id": "97", "properties": {"name": "Jaskinia pod Baczynem"}, "type": "Feature"}, {"bbox": [19.7838886, 50.15712619999999, 19.7838886, 50.15712619999999], "geometry": {"coordinates": [19.7838886, 50.15712619999999], "type": "Point"}, "id": "98", "properties": {"name": null}, "type": "Feature"}, {"bbox": [19.7069776, 50.0649147, 19.7069776, 50.0649147], "geometry": {"coordinates": [19.7069776, 50.0649147], "type": "Point"}, "id": "99", "properties": {"name": "Jaskinia za Matk\u0105 Bosk\u0105"}, "type": "Feature"}, {"bbox": [19.7718477, 50.22278879999998, 19.7718477, 50.22278879999998], "geometry": {"coordinates": [19.7718477, 50.22278879999998], "type": "Point"}, "id": "100", "properties": {"name": "Pod Ko\u015bcio\u0142em Wschodnia"}, "type": "Feature"}, {"bbox": [19.7717191, 50.222988799999996, 19.7717191, 50.222988799999996], "geometry": {"coordinates": [19.7717191, 50.222988799999996], "type": "Point"}, "id": "101", "properties": {"name": "Pod Ko\u015bcio\u0142em Zachodnia"}, "type": "Feature"}, {"bbox": [19.752397, 50.18310259999999, 19.752397, 50.18310259999999], "geometry": {"coordinates": [19.752397, 50.18310259999999], "type": "Point"}, "id": "102", "properties": {"name": "Jaskinia Ma\u0142otowa"}, "type": "Feature"}, {"bbox": [19.8465623, 50.1420016, 19.8465623, 50.1420016], "geometry": {"coordinates": [19.8465623, 50.1420016], "type": "Point"}, "id": "103", "properties": {"name": "Schronisko Wilczy Skok"}, "type": "Feature"}, {"bbox": [19.6644059, 50.147504399999995, 19.6644059, 50.147504399999995], "geometry": {"coordinates": [19.6644059, 50.147504399999995], "type": "Point"}, "id": "104", "properties": {"name": "Wielki Okap pod Matk\u0105 Bosk\u0105"}, "type": "Feature"}, {"bbox": [19.7482999, 50.16686989999999, 19.7482999, 50.16686989999999], "geometry": {"coordinates": [19.7482999, 50.16686989999999], "type": "Point"}, "id": "105", "properties": {"name": "Komin B\u0119dkowicki"}, "type": "Feature"}, {"bbox": [19.8187163, 50.1642456, 19.8187163, 50.1642456], "geometry": {"coordinates": [19.8187163, 50.1642456], "type": "Point"}, "id": "106", "properties": {"name": "Jaskinia w M\u0105cznej Skale Ma\u0142a"}, "type": "Feature"}, {"bbox": [19.8196202, 50.16399229999999, 19.8196202, 50.16399229999999], "geometry": {"coordinates": [19.8196202, 50.16399229999999], "type": "Point"}, "id": "107", "properties": {"name": "Jaskinia w M\u0105cznej Skale Du\u017ca"}, "type": "Feature"}, {"bbox": [19.8154095, 50.151078999999996, 19.8154095, 50.151078999999996], "geometry": {"coordinates": [19.8154095, 50.151078999999996], "type": "Point"}, "id": "108", "properties": {"name": "Jaskinia Wielkowiejska"}, "type": "Feature"}, {"bbox": [19.7376583, 50.1098964, 19.7376583, 50.1098964], "geometry": {"coordinates": [19.7376583, 50.1098964], "type": "Point"}, "id": "109", "properties": {"name": "Jaskinia Le\u015bnych Skrzat\u00f3w"}, "type": "Feature"}, {"bbox": [19.6478056, 50.06124559999999, 19.6478056, 50.06124559999999], "geometry": {"coordinates": [19.6478056, 50.06124559999999], "type": "Point"}, "id": "110", "properties": {"name": "Jaskinia przy Wsi Rybnej"}, "type": "Feature"}, {"bbox": [19.7056533, 50.072921999999984, 19.7056533, 50.072921999999984], "geometry": {"coordinates": [19.7056533, 50.072921999999984], "type": "Point"}, "id": "111", "properties": {"name": "Jaskinia na \u0141opiankach II"}, "type": "Feature"}, {"bbox": [19.6482477, 50.06259549999999, 19.6482477, 50.06259549999999], "geometry": {"coordinates": [19.6482477, 50.06259549999999], "type": "Point"}, "id": "112", "properties": {"name": "Jaskinia Skryta"}, "type": "Feature"}, {"bbox": [19.6640153, 50.1903844, 19.6640153, 50.1903844], "geometry": {"coordinates": [19.6640153, 50.1903844], "type": "Point"}, "id": "113", "properties": {"name": "Jaskinia Graniczna"}, "type": "Feature"}, {"bbox": [19.6824021, 50.17242579999999, 19.6824021, 50.17242579999999], "geometry": {"coordinates": [19.6824021, 50.17242579999999], "type": "Point"}, "id": "114", "properties": {"name": "Jaskinia Beczkowa"}, "type": "Feature"}, {"bbox": [19.7424163, 50.177688, 19.7424163, 50.177688], "geometry": {"coordinates": [19.7424163, 50.177688], "type": "Point"}, "id": "115", "properties": {"name": "Jaskinia Bezsenna"}, "type": "Feature"}, {"bbox": [19.7356809, 50.156612999999986, 19.7356809, 50.156612999999986], "geometry": {"coordinates": [19.7356809, 50.156612999999986], "type": "Point"}, "id": "116", "properties": {"name": "Jaskinia Bojowa"}, "type": "Feature"}, {"bbox": [19.7994996, 50.0418091, 19.7994996, 50.0418091], "geometry": {"coordinates": [19.7994996, 50.0418091], "type": "Point"}, "id": "117", "properties": {"name": "Uroczysko Kryspin\u00f3w"}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+    geo_json_2990d979261eb11fd5c3b9f7302b8732.bindTooltip(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature => {
+        if (feature === null) {
+            return '';
+        } else if (typeof(feature)=='object') {
+            return JSON.stringify(feature);
+        } else {
+            return feature;
+        }
+    }
+    let fields = ["name"];
+    let aliases = ["name"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <th>${aliases[i]}</th>
+            
+            <td>${handleObject(layer.feature.properties[v])}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "sticky": true,
+  "className": "foliumtooltip",
+});
+                     
+    
+            geo_json_2990d979261eb11fd5c3b9f7302b8732.addTo(map_1e53f9cfdf4b1e3d6f323790d1f00487);
+        
+</script>
+</html>
