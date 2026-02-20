@@ -16,7 +16,6 @@ def get_poi(lat: float, lon: float, tags: dict, radius: int = 1000) -> gpd.GeoDa
 
 
 def get_flats_nearby(gdf_flats: gpd.GeoDataFrame, lat: float, lon: float, radius: int = 500):
-    gdf_flats = gpd.read_parquet(r"data\krakow.parquet")
     target_point = shapely.Point(lon, lat)
     gdf_target_point = gpd.GeoSeries(
         [target_point], crs="EPSG:4326").to_crs(epsg=2180)
