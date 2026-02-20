@@ -3,11 +3,12 @@ import geopandas as gpd
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
+from pathlib import Path
 
 
 @st.cache_data
 def load_data():
-    return gpd.read_parquet(r"data\krakow.parquet")
+    return gpd.read_parquet("data/krakow.parquet")
 
 
 testing_point = (50.066130, 19.921678)
