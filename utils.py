@@ -20,6 +20,7 @@ def get_shops(lat: float, lon: float, radius: int = 1000) -> gpd.GeoDataFrame:
             (lat, lon), dist=radius, tags={"shop": True})
         shops_clean_metric = shops.reset_index(
         )[["name", "geometry"]].to_crs(epsg=2180)
+        shops_clean_metric["geometry"] = shops_clean_metric["geometry"].centroid
         return shops_clean_metric
     except Exception:
         return None
