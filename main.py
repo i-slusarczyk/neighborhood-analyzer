@@ -8,7 +8,7 @@ from pathlib import Path
 
 @st.cache_data
 def load_data():
-    return gpd.read_parquet("data/krakow.parquet")
+    return gpd.read_parquet(Path("data") / "krakow.parquet")
 
 
 testing_point = (50.066130, 19.921678)
