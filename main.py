@@ -15,13 +15,6 @@ testing_point = (50.066130, 19.921678)
 lat = testing_point[0]
 lon = testing_point[1]
 
-# shops = get_poi(lat, lon, tags={"shop": "convenience"})
-# cafes = get_poi(lat, lon, tags={"amenity": "cafe"})
-# universities = get_poi(lat, lon, tags={"amenity": "university"})
-stops = get_poi(
-    lat, lon, tags={"public_tranposrt": "stop_position"}, radius=2000)
-# markers = pd.concat([shops, cafes])
-markers = stops
 
 median_price = get_flats_nearby(load_data(), lat, lon)
 st.write(
