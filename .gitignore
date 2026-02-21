@@ -184,7 +184,6 @@ __pycache__/
 *.pyc
 
 # Dane i wyniki (jako analityk rzadko chcesz trzymać surowe dane w Gicie)
-data/
 cache/
 
 # Pliki systemowe
