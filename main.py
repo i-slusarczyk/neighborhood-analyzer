@@ -3,7 +3,8 @@ from pathlib import Path
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-from utils import get_poi, get_flats_nearby, get_nature, nature_score
+from utils import *
+import config
 
 
 @st.cache_data
@@ -38,6 +39,12 @@ distance_to_center = get_distance_to_center(
     lat, lon, city_center_lat, city_center_lon)
 
 
+daily = list(config.weights["daily"]["partial"])
+children = list(config.weights["children"]["partial"])
+culture = list(config.weights["culture"]["partial"])
+transport = list(config.weights["transport"]["partial"])
+
+
 median_price = get_flats_nearby(load_flats(), lat, lon)[
     "pricePerMeter"].median()
 st.write(
@@ -45,11 +52,25 @@ st.write(
 
 
 local_nature = get_nature(load_nature(), lat, lon)
-
+local_pois = local_pois(load_poi(), lat, lon)
 nature_score = nature_score(
-    gdf=local_nature, partial_weights=nature_weights, global_weight=global_weights["nature"])
-st.write(nature_score)
-
+    gdf=local_nature, weights=config.weights)
+st.write(f"Nature score: {nature_score:.2f}")
+culture_score = culture_score(local_pois, config.weights, distance_to_center)
+st.write(f"Culture score: {culture_score:.2f}")
+daily_score = daily_score(local_pois, config.weights)
+st.write(f"Daily score: {daily_score:.2f}")
+transport_score = transport_score(local_pois, config.weights)
+st.write(f"Transport score: {transport_score:.2f}")
+children_score = children_score(local_pois, config.weights)
+st.write(f"Children score: {children_score:.2f}")
+destructors = destructors(local_pois, config.weights)
+st.write(f"Destructors: {destructors:.2f}")
+total_base_score = nature_score + children_score + \
+    transport_score + daily_score + culture_score
+final_score = total_base_score - destructors
+st.write(f"Total base score: {total_base_score:.2f}")
+st.write(f"Final score: {final_score:.2f}")
 m_base = folium.Map(
     location=[st.session_state.map_center_lat,
               st.session_state.map_center_lon],
