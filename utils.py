@@ -1,5 +1,6 @@
 import geopandas as gpd
 import shapely
+import math
 
 
 def get_target_point(lat: float, lon: float):
@@ -25,7 +26,7 @@ def get_nature(gdf_nature: gpd.GeoDataFrame, lat: float, lon: float, radius: int
     return gdf_clipped
 
 
-def nature_score(gdf: gpd.GeoDataFrame, partial_weights: dict, global_weight: float, threshold: float = 0.09, radius: int = 1000):
+def nature_score(gdf: gpd.GeoDataFrame, partial_weights: dict, global_weight: float, threshold: float = 0.08, radius: int = 1000):
     parks = gdf[gdf["category"] == "park"]
     water = gdf[gdf["category"] == "water"]
     meadows = gdf[gdf["category"] == "meadow"]
@@ -42,34 +43,54 @@ def nature_score(gdf: gpd.GeoDataFrame, partial_weights: dict, global_weight: fl
     return score
 
 
-"""def exclude_polygons():
+def daily_score(gdf: gpd.GeoDataFrame, partial_weights: dict, global_weight: float):
+    clinics = gdf[gdf["category"] == "clinic"]
+    pharmacies gdf[gdf["category"] == "pharmacy"]
+    convenience = gdf[gdf["category"] == "convenience"]
+    supermarkets = gdf[gdf["category"] == "supermarket"]
+    score =
 
-    if False:
-            gdf_clipped = gdf_clipped[gdf_clipped.geom_type.isin(
-            ["Polygon", "MultiPolygon"])]
 
-        parks_poly = gdf_clipped[gdf_clipped["category"] == "park"].unary_union
-        forests_poly = gdf_clipped[gdf_clipped["category"] == "forest"].unary_union
-        water_poly = gdf_clipped[gdf_clipped["category"] == "water"].unary_union
-        meadows_poly = gdf_clipped[gdf_clipped["category"] == "meadow"].unary_union
-        grassland_poly = gdf_clipped[gdf_clipped["category"]
-                                    == "grassland"].unary_union
+def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = 2300.0, steepness: float = 0.002) -> float:
+    if distance_to_center_m < 0:
+        return 1.0
+    ratio = 1.0 / (1.0 + math.exp(steepness *
+                   (distance_to_center_m - midpoint)))
+    if distance_to_center_m < 200:
+        return 1.0
+    if ratio < 0.05:
+        return 0.0
+    return ratio
 
-        if parks_poly:
-            if forests_poly:
-                pure_forests = forests_poly.difference(parks_poly)
-            if meadows_poly:
-                pure_meadows = meadows_poly.difference(parks_poly)
-            if water_poly:
-                pure_water = water_poly.difference(parks_poly)
-            if grassland_poly:
-                pure_grassland = grassland_poly.difference(parks_poly)
-        else:
-            pure_forests = forests_poly
-            pure_meadows = meadows_poly
-            pure_water = water_poly
-            pure_grassland = grassland_poly
-        if pure_forests:
 
-        forests_merged = gdf_clipped[gdf_clipped["category"]
-                                    == "forest"].unary_union"""
+def get_distance_to_center(lat, lon, city_center_lat, city_center_lon):
+    center_series = get_target_point(city_center_lat, city_center_lon)
+    pin_series = get_target_point(lat, lon)
+    return pin_series.distance(center_series)
+
+
+def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int):
+    partial = weights["culture"]["partial"]
+    thresholds = weights["culture"]["threshold"]
+    global_weight = weights["culture"]["global"]
+
+    distance_ratio = calculate_distance_ratio(
+        distance_to_center_m=distance_to_center)
+    cafe_ratio = min(math.log(cafes+1, weights["threshold"]["cafe"]+1), 1)
+    restaurant_ratio = min(
+        math.log(restaurants+1, weights["threshold"]["restaurant"]+1), 1)
+    distance_weighted = distance_ratio * partial["distance_to_center"]
+    cafe_weighted = cafe_ratio * partial["cafe"]
+    restaurant_weighted = restaurant_ratio * partial["restaurant"]
+    score = distance_weighted + cafe_weighted + restaurant_weighted
+
+
+def destructors():
+    noise_penalty = max(math.log(restaurants+1, 21)-1, 0)
+    total_penalty = (
+        noise penalty +
+        (industrial*partial_weights["industrial"])**2 +
+        (liquor_stores*partial_weights["liquor_stores"])**2 +
+        (abandoned * partial_weights["abandoned"])**2
+    )
+    final_score = max(base_score - penalty, 0.0)

@@ -21,22 +21,8 @@ def load_flats():
     return gpd.read_parquet(Path("data")/"krakow_flats.parquet")
 
 
-global_weights = {
-    "nature": 27.1,
-    "transport": 27.7,
-    "destrucors": 7.3,
-    "culture": 6.7,
-    "children": 6.5,
-    "daily": 27.7
-}
-
-nature_weights = {
-    "water": 0.22,
-    "park": 0.42,
-    "meadow": 0.09,
-    "grassland": 0.02,
-    "forest": 0.25
-}
+city_center_lon = 19.937989
+city_center_lat = 50.061466
 
 if "pin_lat" not in st.session_state:
     default_point = (50.066130, 19.921678)
@@ -47,6 +33,9 @@ if "pin_lat" not in st.session_state:
     st.session_state.map_zoom = 14
 lat = st.session_state.pin_lat
 lon = st.session_state.pin_lon
+
+distance_to_center = get_distance_to_center(
+    lat, lon, city_center_lat, city_center_lon)
 
 
 median_price = get_flats_nearby(load_flats(), lat, lon)[
