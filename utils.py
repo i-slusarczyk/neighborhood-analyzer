@@ -20,9 +20,9 @@ def get_flats_nearby(gdf_flats: gpd.GeoDataFrame, lat: float, lon: float, radius
     return gdf_flats.loc[distances <= radius]
 
 
-def get_nature(gdf_nature: gpd.GeoDataFrame, lat: float, lon: float, radius: int = config.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
+def clip_to_buffer(gdf: gpd.GeoDataFrame, lat: float, lon: float, radius: int = config.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
     gdf_target_buffer = get_target_point(lat, lon).buffer(radius)
-    gdf_clipped = gpd.clip(gdf_nature, gdf_target_buffer)
+    gdf_clipped = gpd.clip(gdf, gdf_target_buffer)
     return gdf_clipped
 
 
@@ -125,22 +125,27 @@ def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int)
     return score * global_weight
 
 
-def destructors(gdf: gpd.GeoDataFrame, weights: dict):  # industrial area to be counted
+# industrial area to be counted
+def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, weights: dict, radius: int = config.BUFFER_RADIUS_METERS):
     partial = weights["destructors"]["partial"]
     restaurant_threshold = weights["destructors"]["restaurant_threshold"]
 
-    restaurants_count = len(gdf[gdf["category"] == "restaurant"])
-    liquor_stores_count = len(gdf[gdf["category"] == "liquor_store"])
-    abandoned_count = len(gdf[gdf["category"] == "abandoned"])
-    industrial_count = len(gdf[gdf["category"] == "industrial"])
+    restaurants_count = len(gdf_poi[gdf_poi["category"] == "restaurant"])
+    liquor_stores_count = len(gdf_poi[gdf_poi["category"] == "liquor_store"])
+    abandoned_count = len(gdf_poi[gdf_poi["category"] == "abandoned"])
+    industrial_area = gdf_industrial.area.sum()
 
-    noise_penalty = max(math.log(restaurants_count+1,
-                        restaurant_threshold+1)-1, 0)
+    total_buffer_area = radius**2*math.pi
 
-    total_penalty = (noise_penalty + (industrial_count*partial["industrial"])**2 +
-                     (liquor_stores_count*partial["liquor_store"])**2 +
-                     (abandoned_count * partial["abandoned"])**2
-                     )
+    noise_penalty = max(5*(math.log(restaurants_count+1,
+                        restaurant_threshold+1)-1), 0)
+    industrial_ratio = industrial_area / total_buffer_area * 100
+
+    total_penalty = (
+        noise_penalty + (industrial_ratio*partial["industrial"])**2 +
+        (liquor_stores_count**2 * partial["liquor_store"]) +
+        (abandoned_count**2 * partial["abandoned"])
+    )
     return total_penalty
 
 

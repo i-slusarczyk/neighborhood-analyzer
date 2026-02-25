@@ -22,6 +22,11 @@ def load_flats():
     return gpd.read_parquet(Path("data")/"krakow_flats.parquet")
 
 
+@st.cache_data
+def load_industrial():
+    return gpd.read_parquet(Path("data") / "krakow_industrial.parquet")
+
+
 city_center_lon = 19.937989
 city_center_lat = 50.061466
 
@@ -51,24 +56,32 @@ st.write(
     f"Mediana ceny w latach 2023-2024 za metr mieszkania w okolicy twojej pinezki to {median_price:.2f} zł")
 
 
-local_nature = get_nature(load_nature(), lat, lon)
+local_nature = clip_to_buffer(load_nature(), lat, lon)
 local_pois = local_pois(load_poi(), lat, lon)
+local_industry = clip_to_buffer(load_industrial(), lat, lon)
+
 nature_score = nature_score(
     gdf=local_nature, weights=config.weights)
 st.write(f"Nature score: {nature_score:.2f}")
+
 culture_score = culture_score(local_pois, config.weights, distance_to_center)
 st.write(f"Culture score: {culture_score:.2f}")
+
 daily_score = daily_score(local_pois, config.weights)
 st.write(f"Daily score: {daily_score:.2f}")
+
 transport_score = transport_score(local_pois, config.weights)
 st.write(f"Transport score: {transport_score:.2f}")
+
 children_score = children_score(local_pois, config.weights)
 st.write(f"Children score: {children_score:.2f}")
-destructors = destructors(local_pois, config.weights)
+
+destructors = destructors(local_pois, local_industry, config.weights)
 st.write(f"Destructors: {destructors:.2f}")
+
 total_base_score = nature_score + children_score + \
     transport_score + daily_score + culture_score
-final_score = total_base_score - destructors
+final_score = max(total_base_score - destructors, 0.0)
 st.write(f"Total base score: {total_base_score:.2f}")
 st.write(f"Final score: {final_score:.2f}")
 m_base = folium.Map(
@@ -78,8 +91,6 @@ m_base = folium.Map(
 )
 local_nature.explore(m=m_base)
 map_data = st_folium(m_base, key="Green areas", width=800, height=600)
-st.write(local_nature.area.sum())
-st.write(map_data)
 
 
 if map_data and map_data.get("last_clicked"):
