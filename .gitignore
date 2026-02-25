@@ -192,3 +192,7 @@ Thumbs.db
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+gtfs/
+
+.DS_Store
