@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 
 BUFFER_RADIUS_METERS = 1200
@@ -16,9 +15,13 @@ POI_PARQUET = PROCESSED_DIR / "krakow_poi.parquet"
 FLATS_PARQUET = PROCESSED_DIR / "krakow_flats.parquet"
 REACHABILITY_PARQUET = PROCESSED_DIR / "krakow_stop_reachability.parquet"
 
+# in standard gtfs tram route type is 0, but for Kraków, for some reason it is 900
+TRAM_ROUTE_CODE = 900
+TRANSPORT_SATURATION_POINT = 180
 
-city_center = (50.061466, 19.937989)
-default_point = (50.066130, 19.921678)
+# in order: longitude, latitude
+city_center = (19.937989, 50.061466)
+default_point = (19.921678, 50.066130)
 
 
 weights = {
