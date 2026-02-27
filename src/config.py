@@ -1,7 +1,25 @@
 import math
+from pathlib import Path
 
 BUFFER_RADIUS_METERS = 1200
 TARGET_CRS = 2180
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+DATA_DIR = ROOT_DIR / "data"
+PROCESSED_DIR = DATA_DIR / "processed"
+RAW_DIR = DATA_DIR / "raw"
+
+NATURE_PARQUET = PROCESSED_DIR / "krakow_nature.parquet"
+INDUSTRIAL_PARQUET = PROCESSED_DIR / "krakow_industrial.parquet"
+POI_PARQUET = PROCESSED_DIR / "krakow_poi.parquet"
+FLATS_PARQUET = PROCESSED_DIR / "krakow_flats.parquet"
+REACHABILITY_PARQUET = PROCESSED_DIR / "krakow_stop_reachability.parquet"
+
+
+city_center = (50.061466, 19.937989)
+default_point = (50.066130, 19.921678)
+
 
 weights = {
     "nature": {

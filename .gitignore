@@ -194,5 +194,6 @@ Thumbs.db
 .ipynb_checkpoints/
 
 gtfs/
-
+flats_dataset/
+raw/
 .DS_Store

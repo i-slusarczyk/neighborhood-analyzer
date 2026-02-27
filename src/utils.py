@@ -1,38 +1,50 @@
 import geopandas as gpd
 import shapely
 import math
-import config
+import src.config as cfg
 
 
-def get_target_point(lat: float, lon: float):
-    return gpd.GeoSeries([shapely.Point(lon, lat)], crs="EPSG:4326").to_crs(epsg=config.TARGET_CRS)
+def get_target_point(lon: float, lat: float):
+    return gpd.GeoSeries([shapely.Point(lon, lat)], crs="EPSG:4326").to_crs(epsg=cfg.TARGET_CRS)
 
 
-def local_pois(gdf_poi: gpd.GeoDataFrame, lat: float, lon: float, radius: int = config.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
-    target_point = get_target_point(lat, lon)
+def local_pois(gdf_poi: gpd.GeoDataFrame, lon: float, lat: float, radius: int = cfg.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
+    target_point = get_target_point(lon, lat)
     distances = gdf_poi["geometry"].distance(target_point.iloc[0])
     return gdf_poi.loc[distances <= radius]
 
 
-def get_flats_nearby(gdf_flats: gpd.GeoDataFrame, lat: float, lon: float, radius: int = config.BUFFER_RADIUS_METERS):
-    target_point = get_target_point(lat, lon)
+def get_flats_nearby(gdf_flats: gpd.GeoDataFrame, lon: float, lat: float, radius: int = cfg.BUFFER_RADIUS_METERS):
+    target_point = get_target_point(lon, lat)
     distances = gdf_flats["geometry"].distance(target_point.iloc[0])
     return gdf_flats.loc[distances <= radius]
 
 
-def clip_to_buffer(gdf: gpd.GeoDataFrame, lat: float, lon: float, radius: int = config.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
-    gdf_target_buffer = get_target_point(lat, lon).buffer(radius)
+def clip_to_buffer(gdf: gpd.GeoDataFrame, lon: float, lat: float, radius: int = cfg.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
+    gdf_target_buffer = get_target_point(lon, lat).buffer(radius)
     gdf_clipped = gpd.clip(gdf, gdf_target_buffer)
     return gdf_clipped
 
 
-def calculate_nature_threshold_exp(radius: int = config.BUFFER_RADIUS_METERS) -> float:
+def calculate_nature_threshold_exp(radius: int = cfg.BUFFER_RADIUS_METERS) -> float:
     A = 0.28
     k = 0.0012
     return A * math.exp(-k * radius)
 
 
-def nature_score(gdf: gpd.GeoDataFrame, weights: dict, radius: int = config.BUFFER_RADIUS_METERS):  # done for now
+def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = 2300.0, steepness: float = 0.002) -> float:
+    if distance_to_center_m < 0:
+        return 1.0
+    ratio = 1.0 / (1.0 + math.exp(steepness *
+                   (distance_to_center_m - midpoint)))
+    if distance_to_center_m < 200:
+        return 1.0
+    if ratio < 0.05:
+        return 0.0
+    return ratio
+
+
+def nature_score(gdf: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_RADIUS_METERS):  # done for now
     parks = gdf[gdf["category"] == "park"]
     water = gdf[gdf["category"] == "water"]
     meadows = gdf[gdf["category"] == "meadow"]
@@ -85,21 +97,9 @@ def daily_score(gdf: gpd.GeoDataFrame, weights: dict):  # seems good
     return score
 
 
-def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = 2300.0, steepness: float = 0.002) -> float:
-    if distance_to_center_m < 0:
-        return 1.0
-    ratio = 1.0 / (1.0 + math.exp(steepness *
-                   (distance_to_center_m - midpoint)))
-    if distance_to_center_m < 200:
-        return 1.0
-    if ratio < 0.05:
-        return 0.0
-    return ratio
-
-
-def get_distance_to_center(lat, lon, city_center_lat, city_center_lon):
-    center_series = get_target_point(city_center_lat, city_center_lon)
-    pin_series = get_target_point(lat, lon)
+def get_distance_to_center(lon, lat, city_center_lon, city_center_lat):
+    center_series = get_target_point(city_center_lon, city_center_lat)
+    pin_series = get_target_point(lon, lat)
     return pin_series.distance(center_series).iloc[0]
 
 
@@ -115,7 +115,7 @@ def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int)
     cafe_ratio = min(cafes_count/thresholds["cafe"], 1)
 
     restaurant_ratio = min(
-        cafes_count/thresholds["restaurant"], 1)
+        restaurants_count/thresholds["restaurant"], 1)
 
     distance_weighted = distance_ratio * partial["distance_to_center"]
     cafe_weighted = cafe_ratio * partial["cafe"]
@@ -126,7 +126,7 @@ def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int)
 
 
 # industrial area to be counted
-def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, weights: dict, radius: int = config.BUFFER_RADIUS_METERS):
+def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_RADIUS_METERS):
     partial = weights["destructors"]["partial"]
     restaurant_threshold = weights["destructors"]["restaurant_threshold"]
 
@@ -162,11 +162,11 @@ def children_score(gdf: gpd.GeoDataFrame, weights: dict):
         kindergartens_count, thresholds["kindergarten"])/thresholds["kindergarten"]
     school_ratio = min(
         school_count, thresholds["school"])/thresholds["school"]
-    playyground_ratio = min(
+    playground_ratio = min(
         playground_count, thresholds["playground"])/thresholds["playground"]
 
     score = (kindergarten_ratio * partial["kindergarten"] + school_ratio *
-             partial["school"] + playyground_ratio * partial["playground"]) * global_weight
+             partial["school"] + playground_ratio * partial["playground"]) * global_weight
     return score
 
 
