@@ -1,5 +1,6 @@
 import math
 import geopandas as gpd
+import pandas as pd
 import shapely
 import src.config as cfg
 
@@ -203,3 +204,33 @@ def transport_score(gdf, weights, saturation_point, tram_route_code):
     score = min(math.log(distance_weighted+1,
                 saturation_point+1), 1) * global_weight
     return score
+
+# intersecting nature
+
+
+def intersecting_nature(gdf, weights):
+    gdf_polygons = gdf[gdf.geometry.geom_type.isin(
+        ["Polygon", "MultiPolygon"])]
+
+    if gdf_polygons.empty:
+        return gdf_polygons
+
+    partial = weights["nature"]["partial"]
+
+    priority_order = sorted(partial, key=partial.get, reverse=True)
+
+    accumulated_layers = gpd.GeoDataFrame(geometry=[], crs=gdf.crs)
+
+    for category in priority_order:
+        current_layer = gdf_polygons[gdf_polygons["category"] == category].copy(
+        )
+        if current_layer.empty:
+            continue
+        if accumulated_layers.empty:
+            accumulated_layers = current_layer.copy()
+        else:
+            current_layer = gpd.overlay(
+                current_layer, accumulated_layers, how="difference", keep_geom_type=True)
+            accumulated_layers = pd.concat(
+                [accumulated_layers, current_layer], ignore_index=True)
+    return accumulated_layers

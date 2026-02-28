@@ -64,16 +64,20 @@ def main():
         "pricePerMeter"].median()
 
     local_nature = ut.clip_to_buffer(nature_gdf, pin_lon, pin_lat)
+    local_nature_clean = ut.intersecting_nature(
+        local_nature, weights=cfg.weights)
+
     local_pois = ut.points_in_radius(poi_gdf, pin_lon, pin_lat)
+
     local_industry = ut.clip_to_buffer(industrial_gdf, pin_lon, pin_lat)
+
     local_transport = ut.points_in_radius(
         gdf=reachability_gdf, lon=pin_lon, lat=pin_lat)
-
     stops_nearby_reachability = ut.find_reachability(
         local_transport)
 
     scores = {
-        "nature": ut.nature_score(gdf=local_nature, weights=cfg.weights),
+        "nature": ut.nature_score(gdf=local_nature_clean, weights=cfg.weights),
         "children": ut.children_score(local_pois, cfg.weights),
         "daily": ut.daily_score(local_pois, cfg.weights),
         "transport": ut.transport_score(stops_nearby_reachability, cfg.weights, cfg.TRANSPORT_SATURATION_POINT, cfg.TRAM_ROUTE_CODE),
@@ -92,13 +96,6 @@ def main():
     st.write(f"Total base score: {total_base_score:.2f}")
     st.write(f"Final score: {final_score:.2f}")
 
-    # ************** testing **************
-
-    # st.write(scores, destructor_points)  # for quick checks
-    # st.write(
-    #     f"max reachability : {stops_nearby_reachability['max_reach_km'].sum():.2f}")
-    # ************** testing **************
-
     # map rendering
 
     m_base = folium.Map(
@@ -107,8 +104,8 @@ def main():
         zoom_start=st.session_state.map_zoom
     )
 
-    if not local_nature.empty:
-        local_nature.explore(
+    if not local_nature_clean.empty:
+        local_nature_clean.explore(
             m=m_base,
             name="Green areas",
             highlight=True,
