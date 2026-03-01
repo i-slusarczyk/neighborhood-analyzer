@@ -38,9 +38,9 @@ weights = {
     },
     "destructors": {
         "partial": {
-            "industrial": 0.25,
-            "abandoned": 0.10,
-            "liquor_store": 0.25
+            "industrial": 0.13,
+            "abandoned": 0.08,
+            "liquor_store": 0.17
         },
         "restaurant_threshold": 20
     },

@@ -85,7 +85,6 @@ def main():
     }
 
     destructor_points = ut.destructors(local_pois, local_industry, cfg.weights)
-
     total_base_score = sum(scores.values())
     final_score = max(total_base_score - destructor_points, 0.0)
 

@@ -161,7 +161,7 @@ def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, wei
     industrial_ratio = industrial_area / total_buffer_area * 100
 
     total_penalty = (
-        noise_penalty + (industrial_ratio*partial["industrial"])**2 +
+        noise_penalty + (industrial_ratio**(3/2) * partial["industrial"]) +
         (liquor_stores_count**2 * partial["liquor_store"]) +
         (abandoned_count**2 * partial["abandoned"])
     )
