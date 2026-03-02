@@ -5,10 +5,12 @@ import shapely
 import src.config as cfg
 
 
+# pin on the map as gpd series
 def get_target_point(lon: float, lat: float):
     return gpd.GeoSeries([shapely.Point(lon, lat)], crs="EPSG:4326").to_crs(epsg=cfg.TARGET_CRS)
 
 
+# selecting just the points within radius
 def points_in_radius(gdf: gpd.GeoDataFrame, lon: float, lat: float, radius: int = cfg.BUFFER_RADIUS_METERS, add_distance_col: bool = True) -> gpd.GeoDataFrame:
     target_point = get_target_point(lon, lat)
 
@@ -22,25 +24,87 @@ def points_in_radius(gdf: gpd.GeoDataFrame, lon: float, lat: float, radius: int 
     return gdf_filtered
 
 
+# clipping areas to radius
 def clip_to_buffer(gdf: gpd.GeoDataFrame, lon: float, lat: float, radius: int = cfg.BUFFER_RADIUS_METERS) -> gpd.GeoDataFrame:
     gdf_target_buffer = get_target_point(lon, lat).buffer(radius)
     gdf_clipped = gpd.clip(gdf, gdf_target_buffer)
     return gdf_clipped
 
 
-def calculate_nature_threshold_exp(radius: int = cfg.BUFFER_RADIUS_METERS) -> float:
-    A = 0.28
-    k = 0.0012
-    return A * math.exp(-k * radius)
+# applying distance decay function
+def apply_distance_decay(distances: pd.Series, max_dist: float, optimal_dist: float, power: float = math.e):
+    clipped_dist = distances.clip(lower=optimal_dist, upper=max_dist)
+
+    normalized_dist = (clipped_dist - optimal_dist) / (max_dist - optimal_dist)
+
+    penalty = normalized_dist ** power
+
+    return 1-penalty
 
 
+def get_count_adjusted(gdf, category, dynamics):
+    dynamics = dynamics[category]
+
+    done = []
+
+    for subcategory in dynamics:
+
+        category_max_dist = dynamics[subcategory]["max_dist"]
+        category_optimal_dist = dynamics[subcategory]["optimal_dist"]
+        category_power = dynamics[subcategory]["power"]
+
+        category_gdf = gdf[gdf["category"] == subcategory]
+        distances = category_gdf["distance"]
+
+        category_count_adjusted = apply_distance_decay(
+            distances, category_max_dist, category_optimal_dist, category_power)
+        done.append(category_count_adjusted)
+    return pd.concat(done, ignore_index=True)
+
+
+# subtracting area from lower weighted amenities
+def intersecting_nature(gdf, weights):
+    gdf_polygons = gdf[gdf.geometry.geom_type.isin(
+        ["Polygon", "MultiPolygon"])]
+
+    if gdf_polygons.empty:
+        return gdf_polygons
+
+    partial = weights["nature"]["partial"]
+
+    priority_order = sorted(partial, key=partial.get, reverse=True)
+
+    accumulated_layers = gpd.GeoDataFrame(geometry=[], crs=gdf.crs)
+
+    for category in priority_order:
+        current_layer = gdf_polygons[gdf_polygons["category"] == category].copy(
+        )
+        if current_layer.empty:
+            continue
+        if accumulated_layers.empty:
+            accumulated_layers = current_layer.copy()
+        else:
+            current_layer = gpd.overlay(
+                current_layer, accumulated_layers, how="difference", keep_geom_type=True)
+            accumulated_layers = pd.concat(
+                [accumulated_layers, current_layer], ignore_index=True)
+    return accumulated_layers
+
+
+# automatically calculating nature threshold based on given radius
+def calculate_nature_threshold_exp(radius: int = cfg.BUFFER_RADIUS_METERS, max_threshold: float = cfg.NATURE_THRESHOLD_MAX, steepness=cfg.NATURE_THRESHOLD_STEEPNESS) -> float:
+    return max_threshold * math.exp(-steepness * radius)
+
+
+# straightforward - distance from point to the city center
 def get_distance_to_center(lon, lat, city_center_lon, city_center_lat):
     center_series = get_target_point(city_center_lon, city_center_lat)
     pin_series = get_target_point(lon, lat)
     return pin_series.distance(center_series).iloc[0]
 
 
-def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = 2300.0, steepness: float = 0.002) -> float:
+# sigmoid function assigning points based on distance to city center
+def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = cfg.DIST_TO_CENTER_MIDPOINT, steepness: float = cfg.DIST_TO_CENTER_STEEPNESS) -> float:
     if distance_to_center_m < 0:
         return 1.0
     ratio = 1.0 / (1.0 + math.exp(steepness *
@@ -52,6 +116,7 @@ def calculate_distance_ratio(distance_to_center_m: float, midpoint: float = 2300
     return ratio
 
 
+# bus and tram stops reachability - how many kilometers you can reach without changing
 def find_reachability(gdf: gpd.GeoDataFrame):
     # dropping repeated trips, leaving only the ones on the closest stop
     gdf = gdf.sort_values(by="distance", ascending=True)
@@ -70,7 +135,8 @@ def find_reachability(gdf: gpd.GeoDataFrame):
     return gdf_pretty
 
 
-def nature_score(gdf: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_RADIUS_METERS):  # done for now
+# to be added: area lower threshold for parks, distance decay func
+def nature_score(gdf: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_RADIUS_METERS):
     parks = gdf[gdf["category"] == "park"]
     water = gdf[gdf["category"] == "water"]
     meadows = gdf[gdf["category"] == "meadow"]
@@ -99,30 +165,41 @@ def nature_score(gdf: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_
     return score
 
 
-def daily_score(gdf: gpd.GeoDataFrame, weights: dict):  # seems good
-    clinics_count = len(gdf[gdf["category"] == "clinic"])
-    pharmacies_count = len(gdf[gdf["category"] == "pharmacy"])
-    convenience_count = len(gdf[gdf["category"] == "convenience"])
-    supermarkets_count = len(gdf[gdf["category"] == "supermarket"])
+# score for daily infastructure
+def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):  # seems good
+    clinics = gdf[gdf["category"] == "clinic"]
+    pharmacies = gdf[gdf["category"] == "pharmacy"]
+    convenience = gdf[gdf["category"] == "convenience"]
+    supermarkets = gdf[gdf["category"] == "supermarket"]
+
+    clinics_count_adjusted = apply_distance_decay(
+        clinics["distance"], max_dist=1500, optimal_dist=600).sum()
+    pharmacies_count_adjusted = apply_distance_decay(
+        clinics["distance"], max_dist=1500, optimal_dist=600).sum()
+    convenience_count_adjusted = apply_distance_decay(
+        clinics["distance"], max_dist=1500, optimal_dist=600).sum()
+    supermarkets_count_adjusted = apply_distance_decay(
+        clinics["distance"], max_dist=1500, optimal_dist=600).sum()
 
     partial = weights["daily"]["partial"]
     thresholds = weights["daily"]["threshold"]
     global_weight = weights["daily"]["global"]
 
     clinics_ratio = min(
-        clinics_count, thresholds["clinic"])/thresholds["clinic"]
+        clinics_count_adjusted, thresholds["clinic"])/thresholds["clinic"]
     convenience_ratio = min(
-        convenience_count, thresholds["convenience"])/thresholds["convenience"]
+        convenience_count_adjusted, thresholds["convenience"])/thresholds["convenience"]
     supermarkets_ratio = min(
-        supermarkets_count, thresholds["supermarket"])/thresholds["supermarket"]
+        supermarkets_count_adjusted, thresholds["supermarket"])/thresholds["supermarket"]
     pharmacies_ratio = min(
-        pharmacies_count, thresholds["pharmacy"])/thresholds["pharmacy"]
+        pharmacies_count_adjusted, thresholds["pharmacy"])/thresholds["pharmacy"]
 
     score = (supermarkets_ratio * partial["supermarket"] + pharmacies_ratio * partial["pharmacy"] +
              clinics_ratio * partial["clinic"] + convenience_ratio * partial["convenience"]) * global_weight
     return score
 
 
+# access to culture score
 def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int):  # done for now
     cafes_count = len(gdf[gdf["category"] == "cafe"])
     restaurants_count = len(gdf[gdf["category"] == "restaurant"])
@@ -145,6 +222,7 @@ def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int)
     return score * global_weight
 
 
+# destructor points - meant to be subtracted from base score
 def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, weights: dict, radius: int = cfg.BUFFER_RADIUS_METERS):
     partial = weights["destructors"]["partial"]
     restaurant_threshold = weights["destructors"]["restaurant_threshold"]
@@ -168,6 +246,7 @@ def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, wei
     return total_penalty
 
 
+# access to children infrastructure
 def children_score(gdf: gpd.GeoDataFrame, weights: dict):
     kindergartens_count = len(gdf[gdf["category"] == "kindergarten"])
     school_count = len(gdf[gdf["category"] == "school"])
@@ -189,6 +268,7 @@ def children_score(gdf: gpd.GeoDataFrame, weights: dict):
     return score
 
 
+# quality of public transport nearby
 def transport_score(gdf, weights, saturation_point, tram_route_code):
     global_weight = weights["transport"]["global"]
     if gdf.empty:
@@ -204,33 +284,3 @@ def transport_score(gdf, weights, saturation_point, tram_route_code):
     score = min(math.log(distance_weighted+1,
                 saturation_point+1), 1) * global_weight
     return score
-
-# intersecting nature
-
-
-def intersecting_nature(gdf, weights):
-    gdf_polygons = gdf[gdf.geometry.geom_type.isin(
-        ["Polygon", "MultiPolygon"])]
-
-    if gdf_polygons.empty:
-        return gdf_polygons
-
-    partial = weights["nature"]["partial"]
-
-    priority_order = sorted(partial, key=partial.get, reverse=True)
-
-    accumulated_layers = gpd.GeoDataFrame(geometry=[], crs=gdf.crs)
-
-    for category in priority_order:
-        current_layer = gdf_polygons[gdf_polygons["category"] == category].copy(
-        )
-        if current_layer.empty:
-            continue
-        if accumulated_layers.empty:
-            accumulated_layers = current_layer.copy()
-        else:
-            current_layer = gpd.overlay(
-                current_layer, accumulated_layers, how="difference", keep_geom_type=True)
-            accumulated_layers = pd.concat(
-                [accumulated_layers, current_layer], ignore_index=True)
-    return accumulated_layers

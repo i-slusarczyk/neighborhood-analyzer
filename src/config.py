@@ -23,6 +23,12 @@ TRANSPORT_SATURATION_POINT = 180
 city_center = (19.937989, 50.061466)
 default_point = (19.921678, 50.066130)
 
+NATURE_THRESHOLD_STEEPNESS = 0.0012
+NATURE_THRESHOLD_MAX = 0.28
+
+DIST_TO_CENTER_STEEPNESS = 0.002
+DIST_TO_CENTER_MIDPOINT = 2300.0
+
 
 weights = {
     "nature": {
@@ -96,5 +102,42 @@ weights = {
             "tram_stop": 4,
             "bus_stop": 4
         }
+    }
+}
+
+
+spatial_dynamics = {
+    "daily": {
+        "clinic": {"optimal_dist": 600, "max_dist": 1500, "power": 3.0},
+        "pharmacy": {"optimal_dist": 600, "max_dist": 1500, "power": 3.0},
+        "convenience": {"optimal_dist": 350, "max_dist": 900, "power": 2.0},
+        "supermarket": {"optimal_dist": 600, "max_dist": 1000, "power": 3.0},
+    },
+    "nature": {
+        "park": {"optimal_dist": 300, "max_dist": 1800, "power": 3.0},
+        "water": {"optimal_dist": 300, "max_dist": 1800, "power": 3.0},
+        "forest": {"optimal_dist": 300, "max_dist": 1800, "power": 3.0},
+        "meadow": {"optimal_dist": 300, "max_dist": 1800, "power": 3.0},
+        "grassland": {"optimal_dist": 300, "max_dist": 2000, "power": 3.0},
+        "nature_reserve": {"optimal_dist": 300, "max_dist": 1800, "power": 3.0},
+    },
+    "children": {
+        "school": {"optimal_dist": 300, "max_dist": 1200, "power": 3.0},
+        "kindergarten": {"optimal_dist": 300, "max_dist": 800, "power": 2.0},
+        "playground": {"optimal_dist": 250, "max_dist": 800, "power": 2.0}
+    },
+    "destructors": {
+        "industrial": {"optimal_dist": 0, "max_dist": 2000, "power": 3.0},
+        "abandoned": {"optimal_dist": 0, "max_dist": 800, "power": 2.0},
+        "liquor_store": {"optimal_dist": 0, "max_dist": 800, "power": 1.5},
+        "restaurant": {"optimal_dist": 0, "max_dist": 300, "power": 3.0}
+    },
+    "culture": {
+        "cafe": {"optimal_dist": 250, "max_dist": 900, "power": 2.0},
+        "restaurant": {"optimal_dist": 300, "max_dist": 1200, "power": 3.0},
+    },
+    "transport": {
+        "tram_stop": {"optimal_dist": 400, "max_dist": 1200, "power": 1.2},
+        "bus_stop": {"optimal_dist": 400, "max_dist": 1200, "power": 1.2}
     }
 }
