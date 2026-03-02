@@ -308,7 +308,10 @@ def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
 
 # quality of public transport nearby
 def transport_score(gdf, dynamics, weights, saturation_point, tram_route_code):
-    gdf["category"] = "transport"
+    gdf["category"] = "bus_stop"
+    gdf.loc[gdf["route_type"] ==
+            tram_route_code, "category"] = "tram_stop"
+
     adjusted_gdf = get_count_adjusted(gdf, "transport", dynamics)
 
     global_weight = weights["transport"]["global"]
