@@ -85,14 +85,15 @@ def main():
         local_transport)
 
     scores = {
-        "nature": ut.nature_score(gdf=local_nature, weights=cfg.weights),
-        "children": ut.children_score(local_pois, cfg.weights),
-        "daily": ut.daily_score(local_pois, cfg.weights),
-        "transport": ut.transport_score(stops_nearby_reachability, cfg.weights, cfg.TRANSPORT_SATURATION_POINT, cfg.TRAM_ROUTE_CODE),
-        "culture": ut.culture_score(local_pois, cfg.weights, distance_to_center),
+        "nature": ut.nature_score(gdf=local_nature, weights=cfg.weights, dynamics=cfg.spatial_dynamics),
+        "children": ut.children_score(local_pois, cfg.weights, cfg.spatial_dynamics),
+        "daily": ut.daily_score(local_pois, cfg.weights, cfg.spatial_dynamics),
+        "transport": ut.transport_score(stops_nearby_reachability, cfg.spatial_dynamics, cfg.weights, cfg.TRANSPORT_SATURATION_POINT, cfg.TRAM_ROUTE_CODE),
+        "culture": ut.culture_score(local_pois, cfg.weights, distance_to_center, cfg.spatial_dynamics),
     }
 
-    destructor_points = ut.destructors(local_pois, local_industry, cfg.weights)
+    destructor_points = ut.destructors(
+        local_pois, local_industry, cfg.spatial_dynamics, cfg.weights)
     total_base_score = sum(scores.values())
     final_score = max(total_base_score - destructor_points, 0.0)
 
