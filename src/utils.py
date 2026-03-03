@@ -165,7 +165,7 @@ def nature_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics, radius: int = c
     reserves["area_adjusted"] = reserves.area * reserves["adjusted_value"]
 
     partial = weights["nature"]["partial"]
-    threshold = calculate_nature_threshold_exp(radius)
+    threshold = max(calculate_nature_threshold_exp(radius), 0.12)
     global_weight = weights["nature"]["global"]
 
     weighted_area = (
