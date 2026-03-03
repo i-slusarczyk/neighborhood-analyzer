@@ -150,80 +150,55 @@ def find_reachability(gdf: gpd.GeoDataFrame):
 def nature_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics, radius: int = cfg.BUFFER_RADIUS_METERS):
     adjusted_gdf = get_count_adjusted(gdf, "nature", dynamics)
 
-    parks = adjusted_gdf[adjusted_gdf["category"] == "park"]
-    water = adjusted_gdf[adjusted_gdf["category"] == "water"]
-    meadows = adjusted_gdf[adjusted_gdf["category"] == "meadow"]
-    forests = adjusted_gdf[adjusted_gdf["category"] == "forest"]
-    grassland = adjusted_gdf[adjusted_gdf["category"] == "grassland"]
-    reserves = adjusted_gdf[adjusted_gdf["category"] == "nature_reserve"]
-
-    parks["area_adjusted"] = parks.area * parks["adjusted_value"]
-    water["area_adjusted"] = water.area * water["adjusted_value"]
-    meadows["area_adjusted"] = meadows.area * meadows["adjusted_value"]
-    forests["area_adjusted"] = forests.area * forests["adjusted_value"]
-    grassland["area_adjusted"] = grassland.area * grassland["adjusted_value"]
-    reserves["area_adjusted"] = reserves.area * reserves["adjusted_value"]
+    if not adjusted_gdf.empty:
+        adjusted_gdf["area_adjusted"] = adjusted_gdf.area * \
+            adjusted_gdf["adjusted_value"]
+    else:
+        adjusted_gdf["area_adjusted"] = 0.0
 
     partial = weights["nature"]["partial"]
     threshold = max(calculate_nature_threshold_exp(radius), 0.12)
     global_weight = weights["nature"]["global"]
 
-    weighted_area = (
-        water["area_adjusted"].sum() * partial["water"] +
-        forests["area_adjusted"].sum() * partial["forest"] +
-        parks["area_adjusted"].sum() * partial["park"] +
-        meadows["area_adjusted"].sum() * partial["meadow"] +
-        grassland["area_adjusted"].sum() * partial["grassland"] +
-        reserves["area_adjusted"].sum() * partial["nature_reserve"]
-    )
+    area_sum = 0.0
+
+    for category_name, category_weight in partial.items():
+        category_gdf = adjusted_gdf[adjusted_gdf["category"] == category_name]
+        weighted_area = category_gdf["area_adjusted"].sum() * category_weight
+        area_sum += weighted_area
 
     total_buffer_area = radius**2*math.pi
 
-    score = min((weighted_area / (total_buffer_area * threshold)),
+    score = min((area_sum / (total_buffer_area * threshold)),
                 1) * global_weight
 
     return score
 
 
 # score for daily infastructure
-def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):  # seems good
+def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
     adjusted_gdf = get_count_adjusted(gdf, "daily", dynamics)
-
-    clinics_count = adjusted_gdf[adjusted_gdf["category"]
-                                 == "clinic"]["adjusted_value"].sum()
-    pharmacies_count = adjusted_gdf[adjusted_gdf["category"]
-                                    == "pharmacy"]["adjusted_value"].sum()
-    convenience_count = adjusted_gdf[adjusted_gdf["category"]
-                                     == "convenience"]["adjusted_value"].sum()
-    supermarkets_count = adjusted_gdf[adjusted_gdf["category"]
-                                      == "supermarket"]["adjusted_value"].sum()
 
     partial = weights["daily"]["partial"]
     thresholds = weights["daily"]["threshold"]
     global_weight = weights["daily"]["global"]
 
-    clinics_ratio = min(
-        clinics_count, thresholds["clinic"])/thresholds["clinic"]
-    convenience_ratio = min(
-        convenience_count, thresholds["convenience"])/thresholds["convenience"]
-    supermarkets_ratio = min(
-        supermarkets_count, thresholds["supermarket"])/thresholds["supermarket"]
-    pharmacies_ratio = min(
-        pharmacies_count, thresholds["pharmacy"])/thresholds["pharmacy"]
+    score_sum = 0.0
 
-    score = (supermarkets_ratio * partial["supermarket"] + pharmacies_ratio * partial["pharmacy"] +
-             clinics_ratio * partial["clinic"] + convenience_ratio * partial["convenience"]) * global_weight
-    return score
+    for category_name, category_weight in partial.items():
+        category_count = adjusted_gdf[adjusted_gdf["category"]
+                                      == category_name]["adjusted_value"].sum()
+
+        category_ratio = min(category_count / thresholds[category_name], 1)
+
+        score_sum += category_ratio * category_weight
+
+    return score_sum * global_weight
 
 
 # access to culture score
-def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int, dynamics):  # done for now
+def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int, dynamics):
     adjusted_gdf = get_count_adjusted(gdf, "culture", dynamics)
-
-    cafes_count = adjusted_gdf[adjusted_gdf["category"]
-                               == "cafe"]["adjusted_value"].sum()
-    restaurants_count = adjusted_gdf[adjusted_gdf["category"]
-                                     == "restaurant"]["adjusted_value"].sum()
 
     partial = weights["culture"]["partial"]
     thresholds = weights["culture"]["threshold"]
@@ -232,17 +207,19 @@ def culture_score(gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int,
     # distance to the city center
     distance_ratio = calculate_distance_ratio(distance_to_center)
 
-    cafe_ratio = min(cafes_count/thresholds["cafe"], 1)
+    score_sum = distance_ratio * partial["distance_to_center"]
 
-    restaurant_ratio = min(
-        restaurants_count/thresholds["restaurant"], 1)
+    for category_name, category_weight in partial.items():
+        if category_name == "distance_to_center":
+            continue
+        category_count = adjusted_gdf[adjusted_gdf["category"]
+                                      == category_name]["adjusted_value"].sum()
 
-    distance_weighted = distance_ratio * partial["distance_to_center"]
-    cafe_weighted = cafe_ratio * partial["cafe"]
-    restaurant_weighted = restaurant_ratio * partial["restaurant"]
+        category_ratio = min(category_count / thresholds[category_name], 1)
 
-    score = distance_weighted + cafe_weighted + restaurant_weighted
-    return score * global_weight
+        score_sum += category_ratio * category_weight
+
+    return score_sum * global_weight
 
 
 # destructor points - meant to be subtracted from base score
@@ -251,11 +228,15 @@ def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, dyn
     adjusted_gdf_industrial = get_count_adjusted(
         gdf_industrial, "destructors", dynamics)
 
+    if not adjusted_gdf_industrial.empty:
+        adjusted_gdf_industrial["area_adjusted"] = adjusted_gdf_industrial.area * \
+            adjusted_gdf_industrial["adjusted_value"]
+        industrial_area = adjusted_gdf_industrial["area_adjusted"].sum()
+    else:
+        industrial_area = 0.0
+
     partial = weights["destructors"]["partial"]
     restaurant_threshold = weights["destructors"]["restaurant_threshold"]
-
-    adjusted_gdf_industrial["area_adjusted"] = adjusted_gdf_industrial.area * \
-        adjusted_gdf_industrial["adjusted_value"]
 
     restaurants_count = adjusted_gdf_poi[adjusted_gdf_poi["category"] == "restaurant"]["adjusted_value"].sum(
     )
@@ -263,69 +244,62 @@ def destructors(gdf_poi: gpd.GeoDataFrame, gdf_industrial: gpd.GeoDataFrame, dyn
     )
     abandoned_count = adjusted_gdf_poi[adjusted_gdf_poi["category"] == "abandoned"]["adjusted_value"].sum(
     )
-    industrial_area = adjusted_gdf_industrial["area_adjusted"].sum()
 
     total_buffer_area = radius**2*math.pi
+    industrial_ratio = industrial_area / total_buffer_area * 100
 
     noise_penalty = max(5*(math.log(restaurants_count+1,
                         restaurant_threshold+1)-1), 0)
-    industrial_ratio = industrial_area / total_buffer_area * 100
 
-    total_penalty = (
-        noise_penalty + (industrial_ratio**(3/2) * partial["industrial"]) +
-        (liquor_stores_count**2 * partial["liquor_store"]) +
-        (abandoned_count**2 * partial["abandoned"])
-    )
-    return total_penalty
+    industrial_penalty = industrial_ratio**(3/2) * partial["industrial"]
+    liquor_penalty = liquor_stores_count**2 * partial["liquor_store"]
+    abandoned_penalty = abandoned_count**2 * partial["abandoned"]
+
+    return noise_penalty + industrial_penalty + liquor_penalty + abandoned_penalty
 
 
 # access to children infrastructure
 def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
     adjusted_gdf = get_count_adjusted(gdf, "children", dynamics)
 
-    kindergartens_count = adjusted_gdf[adjusted_gdf["category"]
-                                       == "kindergarten"]["adjusted_value"].sum()
-    school_count = adjusted_gdf[adjusted_gdf["category"]
-                                == "school"]["adjusted_value"].sum()
-    playground_count = adjusted_gdf[adjusted_gdf["category"]
-                                    == "playground"]["adjusted_value"].sum()
-
     partial = weights["children"]["partial"]
     thresholds = weights["children"]["threshold"]
     global_weight = weights["children"]["global"]
 
-    kindergarten_ratio = min(
-        kindergartens_count, thresholds["kindergarten"])/thresholds["kindergarten"]
-    school_ratio = min(
-        school_count, thresholds["school"])/thresholds["school"]
-    playground_ratio = min(
-        playground_count, thresholds["playground"])/thresholds["playground"]
+    score_sum = 0.0
 
-    score = (kindergarten_ratio * partial["kindergarten"] + school_ratio *
-             partial["school"] + playground_ratio * partial["playground"]) * global_weight
-    return score
+    for category_name, category_weight in partial.items():
+        category_count = adjusted_gdf[adjusted_gdf["category"]
+                                      == category_name]["adjusted_value"].sum()
+
+        category_ratio = min(category_count / thresholds[category_name], 1)
+
+        score_sum += category_ratio * category_weight
+
+    return score_sum * global_weight
 
 
 # quality of public transport nearby
 def transport_score(gdf, dynamics, weights, saturation_point, tram_route_code):
-    gdf["category"] = "bus_stop"
-    gdf.loc[gdf["route_type"] ==
-            tram_route_code, "category"] = "tram_stop"
-
-    adjusted_gdf = get_count_adjusted(gdf, "transport", dynamics)
+    gdf_transport = gdf.copy()
 
     global_weight = weights["transport"]["global"]
-    if gdf.empty:
-        return 0
-    gdf_transport = adjusted_gdf
-    is_tram = gdf_transport["route_type"] == tram_route_code
+    if gdf_transport.empty:
+        return 0.0
 
-    # bonus points for trams
-    gdf_transport.loc[is_tram,
-                      "max_reach_km"] = gdf_transport.loc[is_tram, "max_reach_km"]*1.5
+    gdf_transport["category"] = "bus_stop"
+    gdf_transport.loc[gdf_transport["route_type"] ==
+                      tram_route_code, "category"] = "tram_stop"
+
+    adjusted_gdf = get_count_adjusted(gdf_transport, "transport", dynamics)
+
+    # bonus for trams reliability
+    is_tram = adjusted_gdf["route_type"] == tram_route_code
+    adjusted_gdf.loc[is_tram,
+                     "max_reach_km"] = gdf_transport.loc[is_tram, "max_reach_km"]*1.5
 
     distance_adjusted = (
-        gdf_transport["max_reach_km"] * gdf_transport["adjusted_value"]).sum()
+        adjusted_gdf["max_reach_km"] * adjusted_gdf["adjusted_value"]).sum()
 
     score = min(math.log(distance_adjusted+1,
                 saturation_point+1), 1) * global_weight

@@ -128,7 +128,7 @@ spatial_dynamics = {
     },
     "destructors": {
         "industrial": {"optimal_dist": 0, "max_dist": 2000, "power": 2.0},
-        "abandoned": {"optimal_dist": 0, "max_dist": 800, "power": 1.0},
+        "abandoned": {"optimal_dist": 0, "max_dist": 400, "power": 1.0},
         "liquor_store": {"optimal_dist": 0, "max_dist": 400, "power": 1.0},
         "restaurant": {"optimal_dist": 0, "max_dist": 300, "power": 2.0}
     },

@@ -70,7 +70,7 @@ def main():
         pin_lon, pin_lat, city_center_lon, city_center_lat)
 
     # calculations
-    median_price = ut.points_in_radius(flats_gdf, pin_lon, pin_lat, add_distance_col=False)[
+    median_price = ut.points_in_radius(flats_gdf, pin_lon, pin_lat, radius=800, add_distance_col=False)[
         "pricePerMeter"].median()
 
     local_nature = ut.clip_to_buffer(nature_clean_gdf, pin_lon, pin_lat)
@@ -94,6 +94,7 @@ def main():
 
     destructor_points = ut.destructors(
         local_pois, local_industry, cfg.spatial_dynamics, cfg.weights)
+
     total_base_score = sum(scores.values())
     final_score = max(total_base_score - destructor_points, 0.0)
 
