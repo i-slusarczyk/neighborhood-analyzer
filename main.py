@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 import src.config as cfg
 import src.utils as ut
+import src.scoring as scoring
 
 
 @st.cache_data
@@ -61,48 +62,19 @@ def main():
     nature_gdf = load_geodata(cfg.NATURE_PARQUET)
     nature_clean_gdf = clean_nature(nature_gdf, cfg.weights)
 
-    city_center_lon, city_center_lat = cfg.city_center[0], cfg.city_center[1]
-
     pin_lon = st.session_state.pin_lon
     pin_lat = st.session_state.pin_lat
 
-    distance_to_center = ut.get_distance_to_center(
-        pin_lon, pin_lat, city_center_lon, city_center_lat)
+    result = scoring.calculate_full_score(pin_lon, pin_lat, poi_gdf, industrial_gdf,
+                                          reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center, True)
 
-    # calculations
-    median_price = ut.points_in_radius(flats_gdf, pin_lon, pin_lat, radius=800, add_distance_col=False)[
-        "pricePerMeter"].median()
-
-    local_nature = ut.clip_to_buffer(nature_clean_gdf, pin_lon, pin_lat)
-
-    local_pois = ut.points_in_radius(poi_gdf, pin_lon, pin_lat)
-
-    local_industry = ut.clip_to_buffer(industrial_gdf, pin_lon, pin_lat)
-
-    local_transport = ut.points_in_radius(
-        gdf=reachability_gdf, lon=pin_lon, lat=pin_lat)
-    stops_nearby_reachability = ut.find_reachability(
-        local_transport)
-
-    scores = {
-        "nature": ut.nature_score(gdf=local_nature, weights=cfg.weights, dynamics=cfg.spatial_dynamics),
-        "children": ut.children_score(local_pois, cfg.weights, cfg.spatial_dynamics),
-        "daily": ut.daily_score(local_pois, cfg.weights, cfg.spatial_dynamics),
-        "transport": ut.transport_score(stops_nearby_reachability, cfg.spatial_dynamics, cfg.weights, cfg.TRANSPORT_SATURATION_POINT, cfg.TRAM_ROUTE_CODE),
-        "culture": ut.culture_score(local_pois, cfg.weights, distance_to_center, cfg.spatial_dynamics),
-    }
-
-    destructor_points = ut.destructors(
-        local_pois, local_industry, cfg.spatial_dynamics, cfg.weights)
-
-    total_base_score = sum(scores.values())
-    final_score = max(total_base_score - destructor_points, 0.0)
+    layers = result["layers"]
 
     # output
     st.write(
-        f"Mediana ceny w latach 2023-2024 za metr mieszkania w okolicy twojej pinezki to {median_price:.2f} zł")
-    st.write(f"Total base score: {total_base_score:.2f}")
-    st.write(f"Final score: {final_score:.2f}")
+        f"Mediana ceny w latach 2023-2024 za metr mieszkania w okolicy twojej pinezki to {result["median_price"]:.2f} zł")
+    st.write(f"Total base score: {result["base_score"]:.2f}")
+    st.write(f"Final score: {result["final_score"]:.2f}")
 
     # map rendering
     m_base = folium.Map(
@@ -111,15 +83,15 @@ def main():
         zoom_start=st.session_state.map_zoom
     )
 
-    if not local_nature.empty:
-        local_nature.explore(
+    if not layers["nature"].empty:
+        layers["nature"].explore(
             m=m_base,
             name="Green areas",
             highlight=True,
             tooltip=False
         )
-    if not stops_nearby_reachability.empty:
-        stops_nearby_reachability.explore(
+    if not layers["transport"].empty:
+        layers["transport"].explore(
             m=m_base,
             name="Public transport stops",
             highlight=True,
