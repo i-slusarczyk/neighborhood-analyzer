@@ -7,8 +7,12 @@ def calculate_full_score(lon, lat, poi_gdf, industrial_gdf, reachability_gdf, na
         lon, lat, city_center[0], city_center[1])
 
     # calculations
-    median_price = ut.points_in_radius(flats_gdf, lon, lat, radius=800, add_distance_col=False)[
-        "pricePerMeter"].median()
+    local_flats = ut.points_in_radius(
+        flats_gdf, lon, lat, radius=800, add_distance_col=False)
+    if len(local_flats) >= 5:
+        median_price = local_flats["pricePerMeter"].median()
+    else:
+        median_price = None
 
     local_nature = ut.clip_to_buffer(nature_gdf, lon, lat)
     local_pois = ut.points_in_radius(poi_gdf, lon, lat)
@@ -31,7 +35,7 @@ def calculate_full_score(lon, lat, poi_gdf, industrial_gdf, reachability_gdf, na
     final_score = max(total_base_score - destructor_points, 0.0)
 
     value_ratio = (final_score / median_price *
-                   1000) if median_price else 0.0
+                   1000) if median_price else None
     result = {
         "final_score": final_score,
         "base_score": total_base_score,

@@ -8,28 +8,28 @@ import src.scoring as scoring
 
 
 def get_borders():
-    with open(cfg.DATA_DIR / "raw" / "krakow_borders.geojson") as file:
+    with open(cfg.RAW_DIR / "krakow_borders.geojson", encoding="UTF-8") as file:
         return shapely.from_geojson(file.read())
 
 
 def main():
-    print("1. Ładowanie danych przestrzennych...")
+    print("loading geospatial data...")
     poi_gdf = gpd.read_parquet(cfg.POI_PARQUET)
     flats_gdf = gpd.read_parquet(cfg.FLATS_PARQUET)
     industrial_gdf = gpd.read_parquet(cfg.INDUSTRIAL_PARQUET)
     reachability_gdf = gpd.read_parquet(cfg.REACHABILITY_PARQUET)
     nature_gdf = gpd.read_parquet(cfg.NATURE_PARQUET)
 
-    print("2. Oczyszczanie nachodzących na siebie terenów zielonych...")
+    print("cleaning intersecting nature...")
     nature_clean_gdf = ut.intersecting_nature(nature_gdf, cfg.weights)
 
-    print("3. Generowanie siatki H3 (h3pandas)...")
+    print("generating hexagonal grid (H3)")
 
     resolution = 9
     h3shape_borders = h3.geo_to_h3shape(get_borders())
     hexagons = h3.polygon_to_cells(h3shape_borders, resolution)
 
-    print("scoring")
+    print("scoring...")
 
     results = []
     geometries = []
@@ -58,7 +58,8 @@ def main():
         geometries.append(hex_poly)
 
     h3_gdf = gpd.GeoDataFrame(results, geometry=geometries, crs="EPSG:4326")
-    h3_gdf.to_parquet("h3.parquet")
+    h3_gdf.to_parquet(cfg.PROCESSED_DIR / "h3.parquet")
 
 
-main()
+if __name__ == "__main__":
+    main()

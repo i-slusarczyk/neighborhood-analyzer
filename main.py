@@ -6,6 +6,8 @@ import src.config as cfg
 import src.utils as ut
 import src.scoring as scoring
 
+st.set_page_config(page_title="Kraków QoL", layout="wide")
+
 
 @st.cache_data
 # loading data from parquet files
@@ -71,8 +73,11 @@ def main():
     layers = result["layers"]
 
     # output
-    st.write(
-        f"Mediana ceny w latach 2023-2024 za metr mieszkania w okolicy twojej pinezki to {result["median_price"]:.2f} zł")
+    if result["median_price"] is not None:
+        st.write(
+            f"Median price for a square meter nearby your pin is {result['median_price']:.2f} zł")
+    else:
+        st.write("Not enough flat offers found nearby")
     st.write(f"Total base score: {result["base_score"]:.2f}")
     st.write(f"Final score: {result["final_score"]:.2f}")
 
@@ -80,8 +85,11 @@ def main():
     m_base = folium.Map(
         location=[st.session_state.map_center_lat,
                   st.session_state.map_center_lon],
-        zoom_start=st.session_state.map_zoom
+        zoom_start=st.session_state.map_zoom,
+        tiles=None
     )
+    folium.TileLayer(tiles="CartoDB Positron",
+                     name="CartoDB Positron").add_to(m_base)
 
     if not layers["nature"].empty:
         layers["nature"].explore(
@@ -98,7 +106,8 @@ def main():
         )
     folium.Marker(location=(pin_lat, pin_lon)).add_to(m_base)
     folium.LayerControl(collapsed=False).add_to(m_base)
-    map_data = st_folium(m_base, key="PoI map", width=800, height=600)
+    map_data = st_folium(m_base, key="PoI map",
+                         use_container_width=True, height=500)
 
     # streamlit map interactions
     handle_map_interactions(map_data)
