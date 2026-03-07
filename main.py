@@ -21,6 +21,28 @@ def clean_nature(_gdf: gpd.GeoDataFrame, weights: dict):
     return ut.intersecting_nature(_gdf, weights)
 
 
+def generate_macro_map(_hex_gdf, city_center=cfg.city_center):
+    _hex_gdf = _hex_gdf.assign(
+        final_score=_hex_gdf["final_score"].round(2),
+        median_price=_hex_gdf["median_price"].round(0),
+        value_ratio=(_hex_gdf["value_ratio"]*15).round(2))
+
+    m_macro = folium.Map(
+        location=[city_center[1], city_center[0]], zoom_start=12, tiles=None)
+    folium.TileLayer(tiles="CartoDB Positron",
+                     name="CartoDB Positron",).add_to(m_macro)
+    value_ratio_map = _hex_gdf.explore(column="value_ratio", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Value Ratio", legend=False, show=True)
+    final_score_map = _hex_gdf.explore(column="final_score", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Final Score", legend=False, show=False)
+    median_price_map = _hex_gdf.explore(column="median_price", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Median price", legend=False, show=False)
+
+    folium.LayerControl(collapsed=False).add_to(m_macro)
+
+    return m_macro
+
+
 # streamlit initial variables
 def init_session_state(default_point):
     if "pin_lat" not in st.session_state:
@@ -66,19 +88,19 @@ def main():
     nature_gdf = load_geodata(cfg.NATURE_PARQUET)
     nature_clean_gdf = clean_nature(nature_gdf, cfg.weights)
 
-    pin_lon = st.session_state.pin_lon
-    pin_lat = st.session_state.pin_lat
-
-    result = scoring.calculate_full_score(pin_lon, pin_lat, poi_gdf, industrial_gdf,
-                                          reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center, True)
-
-    layers = result["layers"]
-
     # output
 
     tab1, tab2 = st.tabs(["Place Rating", "Overall Map"])
 
     with tab1:
+
+        pin_lon = st.session_state.pin_lon
+        pin_lat = st.session_state.pin_lat
+
+        result = scoring.calculate_full_score(pin_lon, pin_lat, poi_gdf, industrial_gdf,
+                                              reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center, True)
+        layers = result["layers"]
+
         st.markdown("### Scoring Details")
 
         components = result["component_scores"]
@@ -91,9 +113,9 @@ def main():
             cols[i].metric(label=category_name.capitalize(),
                            value=f"{value:.1f}")
         cols[-2].metric(label="Destructors",
-                        value=f"{result["destructors"]:.1f}")
+                        value=f"{result['destructors']:.1f}")
         cols[-1].metric(label="Total score",
-                        value=f"{result["final_score"]:.1f}")
+                        value=f"{result['final_score']:.1f}")
         if result["median_price"] is not None:
             st.subheader(
                 f"Median price for a square meter nearby your pin is {result['median_price']:.0f} zł")
@@ -110,48 +132,55 @@ def main():
         folium.TileLayer(tiles="CartoDB Positron",
                          name="CartoDB Positron").add_to(m_base)
 
-        if not layers["nature"].empty:
-            layers["nature"].explore(
-                m=m_base,
-                name="Green areas",
-                highlight=True,
-                tooltip=False
-            )
-        if not layers["transport"].empty:
-            layers["transport"].explore(
-                m=m_base,
-                name="Public transport stops",
-                highlight=True,
-            )
+        # if not layers["nature"].empty:
+        #     layers["nature"].explore(
+        #         m=m_base,
+        #         name="Green areas",
+        #         highlight=True,
+        #         tooltip=False
+        #     )
+        # if not layers["transport"].empty:
+        #     layers["transport"].explore(
+        #         m=m_base,
+        #         name="Public transport stops",
+        #         highlight=True,
+        #     )
+
+        for layer in layers:
+            layer_name = layer.capitalize()
+
+            if layer == "nature":
+                if not layers[layer].empty:
+                    layers[layer].explore(
+                        m=m_base,
+                        name=layer_name,
+                        show=True
+                    )
+                else:
+                    folium.FeatureGroup(
+                        name=layer_name, show=True).add_to(m_base)
+            else:
+                if not layers[layer].empty:
+                    layers[layer].explore(
+                        m=m_base,
+                        name=layer_name,
+                        show=False
+                    )
+                else:
+                    folium.FeatureGroup(
+                        name=layer_name, show=False).add_to(m_base)
+
         folium.Marker(location=(pin_lat, pin_lon)).add_to(m_base)
         folium.LayerControl(collapsed=False).add_to(m_base)
-        map_data = st_folium(m_base, key="PoI map",
+        map_data = st_folium(m_base, key="micro_map",
                              use_container_width=True, height=500)
 
         handle_map_interactions(map_data)
 
     with tab2:
-        m_hex = folium.Map(
-            location=[cfg.city_center[1], cfg.city_center[0]], zoom_start=12, tiles=None)
-
-        folium.TileLayer(tiles="CartoDB Positron",
-                         name="CartoDB Positron",).add_to(m_hex)
-
-        m_macro = hex_gdf.assign(
-            final_score=hex_gdf["final_score"].round(2),
-            median_price=hex_gdf["median_price"].round(0),
-            value_ratio=(hex_gdf["value_ratio"]*15).round(2))
-
-        value_ratio_map = m_macro.explore(column="value_ratio", cmap="RdYlGn", tooltip=[
-            "final_score", "median_price", "value_ratio"], m=m_hex, name="Value Ratio", legend=False, show=True)
-        m_macro.explore(column="final_score", cmap="RdYlGn", tooltip=[
-            "final_score", "median_price", "value_ratio"], m=m_hex, name="Final Score", legend=False, show=False)
-        median_price_map = m_macro.explore(column="median_price", cmap="RdYlGn", tooltip=[
-            "final_score", "median_price", "value_ratio"], m=m_hex, name="Median price", legend=False, show=False)
-
-        folium.LayerControl(collapsed=False).add_to(m_hex)
-
-        st_folium(m_hex, use_container_width=True)
+        st.title("Macro H3 Map")
+        st_folium(generate_macro_map(hex_gdf, cfg.city_center), key="macro_map",
+                  use_container_width=True, height=500, returned_objects=[])
 
     # base map interactions
 

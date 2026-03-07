@@ -48,7 +48,11 @@ def calculate_full_score(lon, lat, poi_gdf, industrial_gdf, reachability_gdf, na
     if return_layers:
         result["layers"] = {
             "nature": local_nature,
-            "transport": stops_nearby_reachability
+            "transport": stops_nearby_reachability,
+            "children": local_pois[local_pois["category"].isin(cfg.weights["children"]["partial"].keys())],
+            "daily": local_pois[local_pois["category"].isin(cfg.weights["daily"]["partial"].keys())],
+            "culture": local_pois[local_pois["category"].isin(cfg.weights["culture"]["partial"].keys())],
+            "industry": local_industry
         }
 
     return result

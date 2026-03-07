@@ -34,12 +34,12 @@ weights = {
     "nature": {
         "global": 27.2,
         "partial": {
-            "water": 0.22,
+            "water": 0.25,
             "park": 0.42,
-            "meadow": 0.09,
-            "grassland": 0.02,
+            "meadow": 0.12,
+            "grassland": 0.08,
             "forest": 0.25,
-            "nature_reserve": 0.5  # high weight over 1.0 because it's a nice addition - not a need
+            "nature_reserve": 0.5
         }
     },
     "destructors": {
