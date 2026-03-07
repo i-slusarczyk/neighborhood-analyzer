@@ -4,6 +4,9 @@ import folium
 from streamlit_folium import st_folium
 import src.config as cfg
 import src.utils as ut
+import src.scoring as scoring
+
+st.set_page_config(page_title="Kraków QoL", layout="wide")
 
 
 @st.cache_data
@@ -16,6 +19,28 @@ def load_geodata(file_path):
 # cleaning intersecting nature
 def clean_nature(_gdf: gpd.GeoDataFrame, weights: dict):
     return ut.intersecting_nature(_gdf, weights)
+
+
+def generate_macro_map(_hex_gdf, city_center=cfg.city_center):
+    _hex_gdf = _hex_gdf.assign(
+        final_score=_hex_gdf["final_score"].round(2),
+        median_price=_hex_gdf["median_price"].round(0),
+        value_ratio=(_hex_gdf["value_ratio"]*15).round(2))
+
+    m_macro = folium.Map(
+        location=[city_center[1], city_center[0]], zoom_start=12, tiles=None)
+    folium.TileLayer(tiles="CartoDB Positron",
+                     name="CartoDB Positron",).add_to(m_macro)
+    value_ratio_map = _hex_gdf.explore(column="value_ratio", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Value Ratio", legend=False, show=True)
+    final_score_map = _hex_gdf.explore(column="final_score", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Final Score", legend=False, show=False)
+    median_price_map = _hex_gdf.explore(column="median_price", cmap="RdYlGn", tooltip=[
+        "final_score", "median_price", "value_ratio"], m=m_macro, name="Median price", legend=False, show=False)
+
+    folium.LayerControl(collapsed=False).add_to(m_macro)
+
+    return m_macro
 
 
 # streamlit initial variables
@@ -52,6 +77,8 @@ def main():
     init_session_state(default_point)
 
     # loading data
+    hex_gdf = load_geodata("data/processed/h3.parquet")
+
     poi_gdf = load_geodata(cfg.POI_PARQUET)
 
     flats_gdf = load_geodata(cfg.FLATS_PARQUET)
@@ -61,75 +88,101 @@ def main():
     nature_gdf = load_geodata(cfg.NATURE_PARQUET)
     nature_clean_gdf = clean_nature(nature_gdf, cfg.weights)
 
-    city_center_lon, city_center_lat = cfg.city_center[0], cfg.city_center[1]
-
-    pin_lon = st.session_state.pin_lon
-    pin_lat = st.session_state.pin_lat
-
-    distance_to_center = ut.get_distance_to_center(
-        pin_lon, pin_lat, city_center_lon, city_center_lat)
-
-    # calculations
-    median_price = ut.points_in_radius(flats_gdf, pin_lon, pin_lat, radius=800, add_distance_col=False)[
-        "pricePerMeter"].median()
-
-    local_nature = ut.clip_to_buffer(nature_clean_gdf, pin_lon, pin_lat)
-
-    local_pois = ut.points_in_radius(poi_gdf, pin_lon, pin_lat)
-
-    local_industry = ut.clip_to_buffer(industrial_gdf, pin_lon, pin_lat)
-
-    local_transport = ut.points_in_radius(
-        gdf=reachability_gdf, lon=pin_lon, lat=pin_lat)
-    stops_nearby_reachability = ut.find_reachability(
-        local_transport)
-
-    scores = {
-        "nature": ut.nature_score(gdf=local_nature, weights=cfg.weights, dynamics=cfg.spatial_dynamics),
-        "children": ut.children_score(local_pois, cfg.weights, cfg.spatial_dynamics),
-        "daily": ut.daily_score(local_pois, cfg.weights, cfg.spatial_dynamics),
-        "transport": ut.transport_score(stops_nearby_reachability, cfg.spatial_dynamics, cfg.weights, cfg.TRANSPORT_SATURATION_POINT, cfg.TRAM_ROUTE_CODE),
-        "culture": ut.culture_score(local_pois, cfg.weights, distance_to_center, cfg.spatial_dynamics),
-    }
-
-    destructor_points = ut.destructors(
-        local_pois, local_industry, cfg.spatial_dynamics, cfg.weights)
-
-    total_base_score = sum(scores.values())
-    final_score = max(total_base_score - destructor_points, 0.0)
-
     # output
-    st.write(
-        f"Mediana ceny w latach 2023-2024 za metr mieszkania w okolicy twojej pinezki to {median_price:.2f} zł")
-    st.write(f"Total base score: {total_base_score:.2f}")
-    st.write(f"Final score: {final_score:.2f}")
 
-    # map rendering
-    m_base = folium.Map(
-        location=[st.session_state.map_center_lat,
-                  st.session_state.map_center_lon],
-        zoom_start=st.session_state.map_zoom
-    )
+    tab1, tab2 = st.tabs(["Place Rating", "Overall Map"])
 
-    if not local_nature.empty:
-        local_nature.explore(
-            m=m_base,
-            name="Green areas",
-            highlight=True,
-            tooltip=False
+    with tab1:
+
+        pin_lon = st.session_state.pin_lon
+        pin_lat = st.session_state.pin_lat
+
+        result = scoring.calculate_full_score(pin_lon, pin_lat, poi_gdf, industrial_gdf,
+                                              reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center, True)
+        layers = result["layers"]
+
+        st.markdown("### Scoring Details")
+
+        components = result["component_scores"]
+
+        n_cols = len(components) + 2
+
+        cols = st.columns(n_cols)
+
+        for i, (category_name, value) in enumerate(components.items()):
+            cols[i].metric(label=category_name.capitalize(),
+                           value=f"{value:.1f}")
+        cols[-2].metric(label="Destructors",
+                        value=f"{result['destructors']:.1f}")
+        cols[-1].metric(label="Total score",
+                        value=f"{result['final_score']:.1f}")
+        if result["median_price"] is not None:
+            st.subheader(
+                f"Median price for a square meter nearby your pin is {result['median_price']:.0f} zł")
+        else:
+            st.subheader("Not enough flat offers found nearby")
+
+        # map rendering
+        m_base = folium.Map(
+            location=[st.session_state.map_center_lat,
+                      st.session_state.map_center_lon],
+            zoom_start=st.session_state.map_zoom,
+            tiles=None
         )
-    if not stops_nearby_reachability.empty:
-        stops_nearby_reachability.explore(
-            m=m_base,
-            name="Public transport stops",
-            highlight=True,
-        )
-    folium.Marker(location=(pin_lat, pin_lon)).add_to(m_base)
-    folium.LayerControl(collapsed=False).add_to(m_base)
-    map_data = st_folium(m_base, key="PoI map", width=800, height=600)
+        folium.TileLayer(tiles="CartoDB Positron",
+                         name="CartoDB Positron").add_to(m_base)
 
-    # streamlit map interactions
-    handle_map_interactions(map_data)
+        # if not layers["nature"].empty:
+        #     layers["nature"].explore(
+        #         m=m_base,
+        #         name="Green areas",
+        #         highlight=True,
+        #         tooltip=False
+        #     )
+        # if not layers["transport"].empty:
+        #     layers["transport"].explore(
+        #         m=m_base,
+        #         name="Public transport stops",
+        #         highlight=True,
+        #     )
+
+        for layer in layers:
+            layer_name = layer.capitalize()
+
+            if layer == "nature":
+                if not layers[layer].empty:
+                    layers[layer].explore(
+                        m=m_base,
+                        name=layer_name,
+                        show=True
+                    )
+                else:
+                    folium.FeatureGroup(
+                        name=layer_name, show=True).add_to(m_base)
+            else:
+                if not layers[layer].empty:
+                    layers[layer].explore(
+                        m=m_base,
+                        name=layer_name,
+                        show=False
+                    )
+                else:
+                    folium.FeatureGroup(
+                        name=layer_name, show=False).add_to(m_base)
+
+        folium.Marker(location=(pin_lat, pin_lon)).add_to(m_base)
+        folium.LayerControl(collapsed=False).add_to(m_base)
+        map_data = st_folium(m_base, key="micro_map",
+                             use_container_width=True, height=500)
+
+        handle_map_interactions(map_data)
+
+    with tab2:
+        st.title("Macro H3 Map")
+        st_folium(generate_macro_map(hex_gdf, cfg.city_center), key="macro_map",
+                  use_container_width=True, height=500, returned_objects=[])
+
+    # base map interactions
 
 
 if __name__ == "__main__":
