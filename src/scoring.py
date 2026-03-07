@@ -34,8 +34,7 @@ def calculate_full_score(lon, lat, poi_gdf, industrial_gdf, reachability_gdf, na
     total_base_score = sum(component_scores.values())
     final_score = max(total_base_score - destructor_points, 0.0)
 
-    value_ratio = (final_score / median_price *
-                   1000) if median_price else None
+    value_ratio = (median_price / final_score) if median_price else None
     result = {
         "final_score": final_score,
         "base_score": total_base_score,
