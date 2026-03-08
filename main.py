@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -23,24 +24,54 @@ def clean_nature(_gdf: gpd.GeoDataFrame, weights: dict):
 
 def generate_macro_map(_hex_gdf, city_center=cfg.city_center):
     _hex_gdf = _hex_gdf.assign(
-        final_score=_hex_gdf["final_score"].round(2),
-        median_price=_hex_gdf["median_price"].round(0),
-        value_ratio=(_hex_gdf["value_ratio"]).round(2))
+        score_display=_hex_gdf["final_score"].apply(
+            lambda x: f"{x:.1f} pts" if pd.notna(x) else "No data available"),
+        median_display=_hex_gdf["median_price"].apply(
+            lambda x: f"{x:.0f} zł/m²" if pd.notna(x) else "Not enough flat offers found nearby"),
+        value_ratio_display=(_hex_gdf["value_ratio"]).apply(
+            lambda x: f"{x:.1f} zł for point" if pd.notna(x) else "Not enough flat offers found nearby")
+    )
 
     m_macro = folium.Map(
         location=[city_center[1], city_center[0]], zoom_start=12, tiles=None)
     folium.TileLayer(tiles="CartoDB Positron",
                      name="CartoDB Positron",).add_to(m_macro)
-    value_ratio_map = _hex_gdf.explore(column="value_ratio", scheme="Quantiles", k=7, cmap="RdYlGn_r", tooltip=[
-        "final_score", "median_price", "value_ratio"], tooltip_kwds={"aliases": [
-            "Final Score", "Median Price", "Price for Point"]}, m=m_macro, name="Price for Point", legend=False, show=True)
-    final_score_map = _hex_gdf.explore(column="final_score", cmap="RdYlGn", tooltip=[
-        "final_score", "median_price", "value_ratio"], tooltip_kwds={"aliases": [
-            "Final Score", "Median Price", "Price for Point"]}, m=m_macro, name="Final Score", legend=False, show=False)
-    median_price_map = _hex_gdf.explore(column="median_price", scheme="Quantiles", k=15, cmap="RdYlGn", tooltip=[
-        "final_score", "median_price", "value_ratio"], tooltip_kwds={"aliases": [
-            # 15 quantiles is very much, but I use them just to get more variety in colors - not to actually utilize quantiles
-            "Final Score", "Median Price", "Price for Point"]}, m=m_macro, name="Median price", legend=False, show=False)
+    value_ratio_map = _hex_gdf.explore(
+        column="value_ratio",
+        scheme="Quantiles",
+        k=7, cmap="RdYlGn_r",
+        tooltip=["score_display", "median_display", "value_ratio_display"],
+        tooltip_kwds={"aliases": ["Final Score",
+                                  "Median Price", "Price for Point"]},
+        m=m_macro, name="Price for Point",
+        legend=False,
+        show=True
+    )
+    final_score_map = _hex_gdf.explore(
+        column="final_score",
+        cmap="RdYlGn",
+        tooltip=["score_display", "median_display", "value_ratio_display"],
+        tooltip_kwds={"aliases": ["Final Score",
+                                  "Median Price", "Price for Point"]},
+        m=m_macro,
+        name="Final Score",
+        legend=False,
+        show=False
+    )
+
+    median_price_map = _hex_gdf.explore(
+        column="median_price",
+        scheme="Quantiles",
+        k=15,  # 15 quantiles is a lot, but I use them just to get more variety in colors - not to actually utilize quantiles
+        cmap="viridis",
+        tooltip=["score_display", "median_display", "value_ratio_display"],
+        tooltip_kwds={"aliases": ["Final Score",
+                                  "Median Price", "Price for Point"]},
+        m=m_macro,
+        name="Median price",
+        legend=False,
+        show=False
+    )
 
     folium.LayerControl(collapsed=False).add_to(m_macro)
 
@@ -87,6 +118,7 @@ def main():
             padding-top: 2rem; 
         }
         </style>""", unsafe_allow_html=True)
+
     default_point = cfg.default_point
     init_session_state(default_point)
 
@@ -140,35 +172,16 @@ def main():
             c3, c4 = st.columns(2)
             with c3:
                 st.metric(label="Total Score",
-                          value=f"{result["final_score"]:.1f}")
+                          value=f"{result["final_score"]:.1f} pts")
 
             if result["median_price"] is not None:
                 with c4:
                     st.metric(label="Price for Point",
-                              value=f"{result["value_ratio"]:.1f}")
+                              value=f"{result["value_ratio"]:.1f} zł/pt")
                 st.info(
                     f"**Median price nearby:** {result['median_price']:.0f} zł/m²")
             else:
                 st.warning("Not enough flat offers found nearby")
-            # components = result["component_scores"]
-            # n_cols = len(components) + 2
-
-            # cols = st.columns(n_cols)
-
-            # for i, (category_name, value) in enumerate(components.items()):
-            #     cols[i].metric(label=category_name.capitalize(),
-            #                    value=f"{value:.1f}")
-            # cols[-2].metric(label="Destructors",
-            #                 value=f"{result['destructors']:.1f}")
-            # cols[-1].metric(label="Total score",
-            #                 value=f"{result['final_score']:.1f}")
-            # if result["median_price"] is not None:
-            #     st.subheader(
-            #         f"Median price for a square meter nearby your pin is {result['median_price']:.0f} zł")
-            # else:
-            #     st.subheader("Not enough flat offers found nearby")
-
-            # st.write("Click on the map to change the location")
 
         with right_panel:
             # map rendering
@@ -190,22 +203,35 @@ def main():
                             m=m_base,
                             name=layer_name,
                             show=True,
+                            column="category",
+                            cmap="Set3",
                             tooltip=["category", "name"],
-                            tooltip_kwds={"aliases": ["Category", "Name"]}
+                            tooltip_kwds={"aliases": ["Category", "Name"]},
+                            legend=False
                         )
                     else:
                         folium.FeatureGroup(
                             name=layer_name, show=True).add_to(m_base)
                 elif layer == "transport":
                     if not layers[layer].empty:
+                        layers[layer] = layers[layer].assign(
+                            category=layers[layer]["route_type"].apply(
+                                lambda x: "Tram Stop" if x == cfg.TRAM_ROUTE_CODE else "Bus Stop"),
+                            reach_pretty=layers[layer]["max_reach_km"].apply(
+                                lambda x: f"{x:.2f} km")
+                        )
                         layers[layer].explore(
                             m=m_base,
                             name=layer_name,
-                            show=True,
-                            tooltip=["route_type",
-                                     "stop_name", "max_reach_km"],
+                            show=False,
+                            column="category",
+                            cmap="Set1",
+                            tooltip=["category",
+                                     "stop_name", "reach_pretty"],
                             tooltip_kwds={"aliases": [
-                                "Category", "Name", "Max Reach"]}
+                                "Category", "Name", "Max Reach"]},
+                            marker_kwds={"radius": 3.5},
+                            legend=False
                         )
                     else:
                         folium.FeatureGroup(
@@ -216,8 +242,12 @@ def main():
                             m=m_base,
                             name=layer_name,
                             show=False,
+                            column="category",
+                            cmap="Set2",
                             tooltip=["category", "name"],
-                            tooltip_kwds={"aliases": ["Category", "Name"]}
+                            tooltip_kwds={"aliases": ["Category", "Name"]},
+                            marker_kwds={"radius": 3.5},
+                            legend=False
                         )
                     else:
                         folium.FeatureGroup(
@@ -231,11 +261,47 @@ def main():
             handle_map_interactions(map_data)
 
     with tab2:
-        st.markdown("### Macro H3 Map")
-        st_folium(generate_macro_map(hex_gdf, cfg.city_center), key="macro_map",
-                  use_container_width=True, height=500, returned_objects=[])
+        from geopy.geocoders import Nominatim
+        geocoder = Nominatim(user_agent="Kraków QoL Scorer")
+        left_marco, right_macro = st.columns([1.2, 2], gap="large")
+        with left_marco:
+            needed_cols = ["final_score",
+                           "value_ratio", "median_price", "geometry"]
 
-    # base map interactions
+            top_score_hex_gdf = hex_gdf.sort_values(
+                by="final_score", ascending=False).head(3)[needed_cols].copy().reset_index()
+            top_value_hex_gdf = hex_gdf.sort_values(
+                by="value_ratio", ascending=True).head(3)[needed_cols].copy().reset_index()
+            st.markdown("### Hexagons with highest scores")
+            for i, row in top_score_hex_gdf.iterrows():
+                icon = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
+                lat = row.geometry.centroid.y
+                lon = row.geometry.centroid.x
+                location = geocoder.reverse((lat, lon)).address
+                st.write(f"{icon} {location}")
+                col_m1, col_m2, col_m3 = st.columns(3)
+                col_m1.caption(f"Score: **{row.final_score:.1f} pts**")
+                col_m2.caption(f"Price: **{row.median_price:.0f} zł/m²**")
+                col_m3.caption(f"Ratio: **{row.value_ratio:.0f} zł/pt**")
+
+            st.markdown("---")
+            st.markdown("### Hexagons with best value ratio")
+
+            for i, row in top_value_hex_gdf.iterrows():
+                icon = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
+                lat = row.geometry.centroid.y
+                lon = row.geometry.centroid.x
+                location = geocoder.reverse((lat, lon)).address
+                st.write(f"{icon} {location}")
+                col_m1, col_m2, col_m3 = st.columns(3)
+                col_m1.caption(f"Score: **{row.final_score:.1f} pts**")
+                col_m2.caption(f"Price: **{row.median_price:.0f} zł/m²**")
+                col_m3.caption(f"Ratio: **{row.value_ratio:.0f} zł/pt**")
+        with right_macro:
+            st.markdown("### Macro H3 Map")
+
+            st_folium(generate_macro_map(hex_gdf, cfg.city_center), key="macro_map",
+                      use_container_width=True, height=500, returned_objects=[])
 
 
 if __name__ == "__main__":
