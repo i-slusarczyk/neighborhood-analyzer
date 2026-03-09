@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+from geopy.geocoders import Nominatim
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -20,6 +21,35 @@ def load_geodata(file_path):
 # cleaning intersecting nature
 def clean_nature(_gdf: gpd.GeoDataFrame, weights: dict):
     return ut.intersecting_nature(_gdf, weights)
+
+
+@st.cache_data
+def cache_top_hexagons(_gdf, sorting_col):
+    geocoder = Nominatim(user_agent="krakow qol scorer")
+
+    def get_address(row):
+        try:
+            location = geocoder.reverse(
+                (row.geometry.centroid.y, row.geometry.centroid.x), timeout=5)
+            return location if location else "Unknown Address"
+        except Exception:
+            return "Error loading address"
+
+    needed_cols = ["final_score",
+                   "value_ratio", "median_price", "geometry"]
+
+    if sorting_col == "value_ratio":
+
+        top_hex_gdf = _gdf.sort_values(
+            by=sorting_col, ascending=True).head(3)[needed_cols].copy().reset_index()
+    else:
+        top_hex_gdf = _gdf.sort_values(
+            by=sorting_col, ascending=False).head(3)[needed_cols].copy().reset_index()
+
+    top_hex_gdf = top_hex_gdf.assign(
+        address=top_hex_gdf.apply(get_address, axis=1))
+
+    return top_hex_gdf
 
 
 def generate_macro_map(_hex_gdf, city_center=cfg.city_center):
@@ -116,6 +146,9 @@ def main():
         }
         section.stMain .block-container {
             padding-top: 2rem; 
+        }
+        iframe[title="streamlit_folium.st_folium"] {
+        height: 80vh !important;
         }
         </style>""", unsafe_allow_html=True)
 
@@ -261,24 +294,17 @@ def main():
             handle_map_interactions(map_data)
 
     with tab2:
-        from geopy.geocoders import Nominatim
-        geocoder = Nominatim(user_agent="Kraków QoL Scorer")
+
         left_marco, right_macro = st.columns([1.2, 2], gap="large")
         with left_marco:
-            needed_cols = ["final_score",
-                           "value_ratio", "median_price", "geometry"]
 
-            top_score_hex_gdf = hex_gdf.sort_values(
-                by="final_score", ascending=False).head(3)[needed_cols].copy().reset_index()
-            top_value_hex_gdf = hex_gdf.sort_values(
-                by="value_ratio", ascending=True).head(3)[needed_cols].copy().reset_index()
+            top_score_hex_gdf = cache_top_hexagons(hex_gdf, "final_score")
+            top_value_hex_gdf = cache_top_hexagons(hex_gdf, "value_ratio")
+
             st.markdown("### Hexagons with highest scores")
             for i, row in top_score_hex_gdf.iterrows():
                 icon = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                lat = row.geometry.centroid.y
-                lon = row.geometry.centroid.x
-                location = geocoder.reverse((lat, lon)).address
-                st.write(f"{icon} {location}")
+                st.write(f"{icon} {row["address"]}")
                 col_m1, col_m2, col_m3 = st.columns(3)
                 col_m1.caption(f"Score: **{row.final_score:.1f} pts**")
                 col_m2.caption(f"Price: **{row.median_price:.0f} zł/m²**")
@@ -289,10 +315,7 @@ def main():
 
             for i, row in top_value_hex_gdf.iterrows():
                 icon = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                lat = row.geometry.centroid.y
-                lon = row.geometry.centroid.x
-                location = geocoder.reverse((lat, lon)).address
-                st.write(f"{icon} {location}")
+                st.write(f"{icon} {row["address"]}")
                 col_m1, col_m2, col_m3 = st.columns(3)
                 col_m1.caption(f"Score: **{row.final_score:.1f} pts**")
                 col_m2.caption(f"Price: **{row.median_price:.0f} zł/m²**")
@@ -301,7 +324,7 @@ def main():
             st.markdown("### Macro H3 Map")
 
             st_folium(generate_macro_map(hex_gdf, cfg.city_center), key="macro_map",
-                      use_container_width=True, height=500, returned_objects=[])
+                      use_container_width=True, returned_objects=[])
 
 
 if __name__ == "__main__":
