@@ -29,24 +29,30 @@ def cache_top_hexagons(_gdf, sorting_col):
     def get_address(row):
         try:
             location = geocoder.reverse(
-                (row.geometry.centroid.y, row.geometry.centroid.x), timeout=5)
+                (row.geometry.centroid.y, row.geometry.centroid.x), timeout=5
+            )
             return location if location else "Unknown Address"
         except Exception:
             return "Error loading address"
 
-    needed_cols = ["final_score",
-                   "value_ratio", "median_price", "geometry"]
+    needed_cols = ["final_score", "value_ratio", "median_price", "geometry"]
 
     if sorting_col == "value_ratio":
-
-        top_hex_gdf = _gdf.sort_values(
-            by=sorting_col, ascending=True).head(3)[needed_cols].copy().reset_index()
+        top_hex_gdf = (
+            _gdf.sort_values(by=sorting_col, ascending=True)
+            .head(3)[needed_cols]
+            .copy()
+            .reset_index()
+        )
     else:
-        top_hex_gdf = _gdf.sort_values(
-            by=sorting_col, ascending=False).head(3)[needed_cols].copy().reset_index()
+        top_hex_gdf = (
+            _gdf.sort_values(by=sorting_col, ascending=False)
+            .head(3)[needed_cols]
+            .copy()
+            .reset_index()
+        )
 
-    top_hex_gdf = top_hex_gdf.assign(
-        address=top_hex_gdf.apply(get_address, axis=1))
+    top_hex_gdf = top_hex_gdf.assign(address=top_hex_gdf.apply(get_address, axis=1))
 
     return top_hex_gdf
 
@@ -56,31 +62,34 @@ def render_scoring_panel(result):
     c1, c2 = st.columns(2)
     categories = list(result["component_scores"].items())
     with c1:
-        st.metric(label=categories[0][0].capitalize(
-        ), value=f"{categories[0][1]:.1f}")  # Nature
-        st.metric(label=categories[2][0].capitalize(
-        ), value=f"{categories[2][1]:.1f}")  # Daily
-        st.metric(label=categories[4][0].capitalize(
-        ), value=f"{categories[4][1]:.1f}")  # Culture
+        st.metric(
+            label=categories[0][0].capitalize(), value=f"{categories[0][1]:.1f}"
+        )  # Nature
+        st.metric(
+            label=categories[2][0].capitalize(), value=f"{categories[2][1]:.1f}"
+        )  # Daily
+        st.metric(
+            label=categories[4][0].capitalize(), value=f"{categories[4][1]:.1f}"
+        )  # Culture
     with c2:
-        st.metric(label=categories[1][0].capitalize(
-        ), value=f"{categories[1][1]:.1f}")  # Children
-        st.metric(label=categories[3][0].capitalize(
-        ), value=f"{categories[3][1]:.1f}")  # Transport
-        st.metric(label="Destructors",
-                  value=f"{result["destructors"]:.1f}")
+        st.metric(
+            label=categories[1][0].capitalize(), value=f"{categories[1][1]:.1f}"
+        )  # Children
+        st.metric(
+            label=categories[3][0].capitalize(), value=f"{categories[3][1]:.1f}"
+        )  # Transport
+        st.metric(label="Destructors", value=f"{result['destructors']:.1f}")
     st.markdown("---")
     c3, c4 = st.columns(2)
     with c3:
-        st.metric(label="Total Score",
-                  value=f"{result["final_score"]:.1f} pts")
+        st.metric(label="Total Score", value=f"{result['final_score']:.1f} pts")
 
     if result["median_price"] is not None:
         with c4:
-            st.metric(label="Price for Point",
-                      value=f"{result["value_ratio"]:.1f} zł/pt")
-        st.info(
-            f"**Median price nearby:** {result['median_price']:.0f} zł/m²")
+            st.metric(
+                label="Price for Point", value=f"{result['value_ratio']:.1f} zł/pt"
+            )
+        st.info(f"**Median price nearby:** {result['median_price']:.0f} zł/m²")
     else:
         st.warning("Not enough flat offers found nearby")
 
@@ -109,6 +118,7 @@ def render_best_hexagons(hex_gdf):
         col_m2.caption(f"Price: **{row.median_price:.0f} zł/m²**")
         col_m3.caption(f"Ratio: **{row.value_ratio:.0f} zł/pt**")
 
+
 # streamlit initial variables
 
 
@@ -126,7 +136,10 @@ def handle_map_interactions(map_data):
     if map_data and map_data.get("last_clicked"):
         clicked_lat = map_data["last_clicked"]["lat"]
         clicked_lon = map_data["last_clicked"]["lng"]
-        if clicked_lon != st.session_state.pin_lon or clicked_lat != st.session_state.pin_lat:
+        if (
+            clicked_lon != st.session_state.pin_lon
+            or clicked_lat != st.session_state.pin_lat
+        ):
             st.session_state.pin_lon = clicked_lon
             st.session_state.pin_lat = clicked_lat
 
@@ -143,7 +156,8 @@ def handle_map_interactions(map_data):
 def main():
 
     # smaller top margin
-    st.markdown("""
+    st.markdown(
+        """
         <style>
         header.stAppHeader {
             background-color: transparent;
@@ -155,7 +169,9 @@ def main():
         iframe[title="streamlit_folium.st_folium"] {
         height: 70vh !important;
         }
-        </style>""", unsafe_allow_html=True)
+        </style>""",
+        unsafe_allow_html=True,
+    )
 
     init_session_state(cfg.default_point)
 
@@ -169,7 +185,7 @@ def main():
     nature_gdf = load_geodata(cfg.NATURE_PARQUET)
     nature_clean_gdf = clean_nature(nature_gdf, cfg.weights)
 
-    hex_gdf = load_geodata("data/processed/h3.parquet")
+    hex_gdf = load_geodata(cfg.PROCESSED_DIR / "h3.parquet")
 
     # output
     tab1, tab2 = st.tabs(["Place Rating", "Overall Map"])
@@ -180,8 +196,17 @@ def main():
         pin_lon = st.session_state.pin_lon
         pin_lat = st.session_state.pin_lat
 
-        result = scoring.calculate_full_score(pin_lon, pin_lat, poi_gdf, industrial_gdf,
-                                              reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center, True)
+        result = scoring.calculate_full_score(
+            pin_lon,
+            pin_lat,
+            poi_gdf,
+            industrial_gdf,
+            reachability_gdf,
+            nature_clean_gdf,
+            flats_gdf,
+            cfg.city_center,
+            True,
+        )
         layers = result["layers"]
 
         with left_panel:
@@ -190,21 +215,23 @@ def main():
         with right_panel:
             st.markdown("### Points of Interest Map")
             m_base = gen_map.gen_micro_map(layers, st.session_state)
-            map_data = st_folium(m_base, key="micro_map",
-                                 use_container_width=True)
+            map_data = st_folium(m_base, key="micro_map", use_container_width=True)
 
             handle_map_interactions(map_data)
 
     with tab2:
-
         left_marco, right_macro = st.columns([1.2, 2], gap="large")
         with left_marco:
             render_best_hexagons(hex_gdf)
         with right_macro:
             st.markdown("### Macro H3 Map")
 
-            st_folium(gen_map.gen_macro_map(hex_gdf, cfg.city_center), key="macro_map",
-                      use_container_width=True, returned_objects=[])
+            st_folium(
+                gen_map.gen_macro_map(hex_gdf, cfg.city_center),
+                key="macro_map",
+                use_container_width=True,
+                returned_objects=[],
+            )
 
 
 if __name__ == "__main__":

@@ -38,16 +38,26 @@ def main():
         lat, lon = h3.cell_to_latlng(hex_id)
 
         score_data = scoring.calculate_full_score(
-            lon, lat, poi_gdf, industrial_gdf, reachability_gdf, nature_clean_gdf, flats_gdf, cfg.city_center)
+            lon,
+            lat,
+            poi_gdf,
+            industrial_gdf,
+            reachability_gdf,
+            nature_clean_gdf,
+            flats_gdf,
+            cfg.city_center,
+        )
 
-        results.append({
-            "hex_id": hex_id,
-            "final_score": score_data["final_score"],
-            "base_score": score_data["base_score"],
-            "destructors": score_data["destructors"],
-            "median_price": score_data["median_price"],
-            "value_ratio": score_data["value_ratio"]
-        })
+        results.append(
+            {
+                "hex_id": hex_id,
+                "final_score": score_data["final_score"],
+                "base_score": score_data["base_score"],
+                "destructors": score_data["destructors"],
+                "median_price": score_data["median_price"],
+                "value_ratio": score_data["value_ratio"],
+            }
+        )
 
         boundary = h3.cell_to_boundary(hex_id)
 
