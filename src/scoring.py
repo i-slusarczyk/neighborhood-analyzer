@@ -12,16 +12,16 @@ def calculate_full_score(
     flats_gdf,
     city_center,
     return_layers=False,
-):
+) -> dict:
     distance_to_center = ut.get_distance_to_center(
         lon, lat, city_center[0], city_center[1]
     )
 
     # calculations
     local_flats = ut.points_in_radius(
-        flats_gdf, lon, lat, radius=800, add_distance_col=False
+        flats_gdf, lon, lat, radius=cfg.FLAT_FETCH_RADIUS, add_distance_col=False
     )
-    if len(local_flats) >= 5:
+    if len(local_flats) >= cfg.FLAT_COUNT_THRESHOLD:
         median_price = local_flats["pricePerMeter"].median()
     else:
         median_price = None
@@ -36,22 +36,30 @@ def calculate_full_score(
         "nature": ut.nature_score(
             gdf=local_nature, weights=cfg.weights, dynamics=cfg.spatial_dynamics
         ),
-        "children": ut.children_score(local_pois, cfg.weights, cfg.spatial_dynamics),
-        "daily": ut.daily_score(local_pois, cfg.weights, cfg.spatial_dynamics),
+        "children": ut.children_score(
+            gdf=local_pois, weights=cfg.weights, dynamics=cfg.spatial_dynamics
+        ),
+        "daily": ut.daily_score(
+            gdf=local_pois, weights=cfg.weights, dynamics=cfg.spatial_dynamics
+        ),
         "transport": ut.transport_score(
-            stops_nearby_reachability,
-            cfg.spatial_dynamics,
-            cfg.weights,
-            cfg.TRANSPORT_SATURATION_POINT,
-            cfg.TRAM_ROUTE_CODE,
+            gdf=stops_nearby_reachability,
+            weights=cfg.weights,
+            dynamics=cfg.spatial_dynamics,
         ),
         "culture": ut.culture_score(
-            local_pois, cfg.weights, distance_to_center, cfg.spatial_dynamics
+            gdf=local_pois,
+            weights=cfg.weights,
+            dynamics=cfg.spatial_dynamics,
+            distance_to_center=distance_to_center,
         ),
     }
 
     destructor_points = ut.destructors(
-        local_pois, local_industry, cfg.spatial_dynamics, cfg.weights
+        gdf_poi=local_pois,
+        gdf_industrial=local_industry,
+        weights=cfg.weights,
+        dynamics=cfg.spatial_dynamics,
     )
 
     total_base_score = sum(component_scores.values())

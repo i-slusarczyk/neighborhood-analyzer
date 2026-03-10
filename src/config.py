@@ -14,10 +14,10 @@ INDUSTRIAL_PARQUET = PROCESSED_DIR / "krakow_industrial.parquet"
 POI_PARQUET = PROCESSED_DIR / "krakow_poi.parquet"
 FLATS_PARQUET = PROCESSED_DIR / "krakow_flats.parquet"
 REACHABILITY_PARQUET = PROCESSED_DIR / "krakow_stop_reachability.parquet"
+H3_PARQUET = PROCESSED_DIR / "h3.parquet"
 
-# in standard gtfs tram route type is 0, but for Kraków, for some reason it is 900
-TRAM_ROUTE_CODE = 900
-TRANSPORT_SATURATION_POINT = 180
+FLAT_COUNT_THRESHOLD = 5
+FLAT_FETCH_RADIUS = 800
 
 # in order: longitude, latitude
 city_center = (19.937989, 50.061466)
@@ -29,6 +29,23 @@ NATURE_THRESHOLD_MAX = 0.28
 DIST_TO_CENTER_STEEPNESS = 0.002
 DIST_TO_CENTER_MIDPOINT = 2300.0
 
+
+# in standard gtfs tram route type is 0, but for Kraków, for some reason it is 900
+TRAM_ROUTE_CODE = 900
+TRAM_COEFFICIENT = 1.5
+
+TRANSPORT_SATURATION_POINT = 180
+
+CITY_BORDERS_GEOJSON = RAW_DIR / "krakow_borders.geojson"
+
+H3_RESOLUTION = 9
+
+# carriers specific for Kraków
+carriers = {
+    "trams": {"dir": RAW_DIR / "GTFS_KRK_T", "service_id": "service_1"},
+    "mpk": {"dir": RAW_DIR / "GTFS_KRK_A", "service_id": "service_1"},
+    "mobilis": {"dir": RAW_DIR / "GTFS_KRK_M", "service_id": "1582_PO"},
+}
 
 weights = {
     "nature": {

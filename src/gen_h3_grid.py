@@ -7,8 +7,8 @@ import src.utils as ut
 import src.scoring as scoring
 
 
-def get_borders():
-    with open(cfg.RAW_DIR / "krakow_borders.geojson", encoding="UTF-8") as file:
+def get_borders() -> shapely.Geometry:
+    with open(cfg.CITY_BORDERS_GEOJSON, encoding="UTF-8") as file:
         return shapely.from_geojson(file.read())
 
 
@@ -25,9 +25,8 @@ def main():
 
     print("generating hexagonal grid (H3)")
 
-    resolution = 9
     h3shape_borders = h3.geo_to_h3shape(get_borders())
-    hexagons = h3.polygon_to_cells(h3shape_borders, resolution)
+    hexagons = h3.polygon_to_cells(h3shape_borders, cfg.H3_RESOLUTION)
 
     print("scoring...")
 
@@ -68,7 +67,7 @@ def main():
         geometries.append(hex_poly)
 
     h3_gdf = gpd.GeoDataFrame(results, geometry=geometries, crs="EPSG:4326")
-    h3_gdf.to_parquet(cfg.PROCESSED_DIR / "h3.parquet")
+    h3_gdf.to_parquet(cfg.H3_PARQUET)
 
 
 if __name__ == "__main__":

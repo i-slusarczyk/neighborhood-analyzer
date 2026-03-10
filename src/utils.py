@@ -6,7 +6,7 @@ import src.config as cfg
 
 
 # pin on the map as gpd series
-def get_target_point(lon: float, lat: float):
+def get_target_point(lon: float, lat: float) -> gpd.GeoSeries:
     return gpd.GeoSeries([shapely.Point(lon, lat)], crs="EPSG:4326").to_crs(
         epsg=cfg.TARGET_CRS
     )
@@ -51,7 +51,7 @@ def clip_to_buffer(
 # applying distance decay function
 def apply_distance_decay(
     distances: pd.Series, max_dist: float, optimal_dist: float, power: float = math.e
-):
+) -> float:
     clipped_dist = distances.clip(lower=optimal_dist, upper=max_dist)
 
     normalized_dist = (clipped_dist - optimal_dist) / (max_dist - optimal_dist)
@@ -61,16 +61,20 @@ def apply_distance_decay(
     return 1 - penalty
 
 
-def get_count_adjusted(gdf, category, dynamics):
+def get_count_adjusted(
+    gdf: gpd.GeoDataFrame,
+    dynamics: dict,
+    category: str,
+) -> gpd.GeoDataFrame:
     result_gdf = gdf.copy()
     result_gdf["adjusted_value"] = 0.0
 
     if result_gdf.empty:
         return result_gdf
 
-    dynamics = dynamics[category]
+    category_dynamics = dynamics[category]
 
-    for subcategory in dynamics:
+    for subcategory in category_dynamics:
         category_max_dist = dynamics[subcategory]["max_dist"]
         category_optimal_dist = dynamics[subcategory]["optimal_dist"]
         category_power = dynamics[subcategory]["power"]
@@ -89,7 +93,7 @@ def get_count_adjusted(gdf, category, dynamics):
 
 
 # subtracting area from lower weighted amenities
-def intersecting_nature(gdf, weights):
+def intersecting_nature(gdf: gpd.GeoDataFrame, weights: dict) -> gpd.GeoDataFrame:
     gdf_polygons = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
 
     if gdf_polygons.empty:
@@ -127,7 +131,9 @@ def calculate_nature_threshold_exp(
 
 
 # straightforward - distance from point to the city center
-def get_distance_to_center(lon, lat, city_center_lon, city_center_lat):
+def get_distance_to_center(
+    lon: float, lat: float, city_center_lon: float, city_center_lat: float
+):
     center_series = get_target_point(city_center_lon, city_center_lat)
     pin_series = get_target_point(lon, lat)
     return pin_series.distance(center_series).iloc[0]
@@ -150,7 +156,7 @@ def calculate_distance_ratio(
 
 
 # bus and tram stops reachability - how many kilometers you can reach without changing
-def find_reachability(gdf: gpd.GeoDataFrame):
+def find_reachability(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     # dropping repeated trips, leaving only the ones on the closest stop
     gdf = gdf.sort_values(by="distance", ascending=True)
     gdf = gdf.drop_duplicates(subset=["route_number", "direction_id"], keep="first")
@@ -168,13 +174,12 @@ def find_reachability(gdf: gpd.GeoDataFrame):
     return gdf_pretty
 
 
-# to be added: area lower threshold for parks, distance decay func
 def nature_score(
     gdf: gpd.GeoDataFrame,
     weights: dict,
     dynamics,
     radius: int = cfg.BUFFER_RADIUS_METERS,
-):
+) -> float:
     adjusted_gdf = get_count_adjusted(gdf, "nature", dynamics)
 
     if not adjusted_gdf.empty:
@@ -203,7 +208,7 @@ def nature_score(
 
 
 # score for daily infastructure
-def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
+def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict) -> float:
     adjusted_gdf = get_count_adjusted(gdf, "daily", dynamics)
 
     partial = weights["daily"]["partial"]
@@ -226,8 +231,8 @@ def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
 
 # access to culture score
 def culture_score(
-    gdf: gpd.GeoDataFrame, weights: dict, distance_to_center: int, dynamics
-):
+    gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict, distance_to_center: int
+) -> float:
     adjusted_gdf = get_count_adjusted(gdf, "culture", dynamics)
 
     partial = weights["culture"]["partial"]
@@ -257,10 +262,10 @@ def culture_score(
 def destructors(
     gdf_poi: gpd.GeoDataFrame,
     gdf_industrial: gpd.GeoDataFrame,
-    dynamics,
+    dynamics: dict,
     weights: dict,
     radius: int = cfg.BUFFER_RADIUS_METERS,
-):
+) -> float:
     adjusted_gdf_poi = get_count_adjusted(gdf_poi, "destructors", dynamics)
     adjusted_gdf_industrial = get_count_adjusted(
         gdf_industrial, "destructors", dynamics
@@ -302,7 +307,7 @@ def destructors(
 
 
 # access to children infrastructure
-def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
+def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict) -> float:
     adjusted_gdf = get_count_adjusted(gdf, "children", dynamics)
 
     partial = weights["children"]["partial"]
@@ -324,7 +329,11 @@ def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics):
 
 
 # quality of public transport nearby
-def transport_score(gdf, dynamics, weights, saturation_point, tram_route_code):
+def transport_score(
+    gdf: gpd.GeoDataFrame,
+    weights: dict,
+    dynamics: dict,
+) -> float:
     gdf_transport = gdf.copy()
 
     global_weight = weights["transport"]["global"]
@@ -332,16 +341,16 @@ def transport_score(gdf, dynamics, weights, saturation_point, tram_route_code):
         return 0.0
 
     gdf_transport["category"] = "bus_stop"
-    gdf_transport.loc[gdf_transport["route_type"] == tram_route_code, "category"] = (
-        "tram_stop"
-    )
+    gdf_transport.loc[
+        gdf_transport["route_type"] == cfg.TRAM_ROUTE_CODE, "category"
+    ] = "tram_stop"
 
     adjusted_gdf = get_count_adjusted(gdf_transport, "transport", dynamics)
 
-    # bonus for trams reliability
-    is_tram = adjusted_gdf["route_type"] == tram_route_code
+    # bonus points for trams reliability
+    is_tram = adjusted_gdf["route_type"] == cfg.TRAM_ROUTE_CODE
     adjusted_gdf.loc[is_tram, "max_reach_km"] = (
-        gdf_transport.loc[is_tram, "max_reach_km"] * 1.5
+        gdf_transport.loc[is_tram, "max_reach_km"] * cfg.TRAM_COEFFICIENT
     )
 
     distance_adjusted = (
@@ -349,6 +358,7 @@ def transport_score(gdf, dynamics, weights, saturation_point, tram_route_code):
     ).sum()
 
     score = (
-        min(math.log(distance_adjusted + 1, saturation_point + 1), 1) * global_weight
+        min(math.log(distance_adjusted + 1, cfg.TRANSPORT_SATURATION_POINT + 1), 1)
+        * global_weight
     )
     return score

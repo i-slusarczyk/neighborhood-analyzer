@@ -3,35 +3,43 @@ import geopandas as gpd
 from pathlib import Path
 import src.config as cfg
 
-mobilis_path = Path("GTFS_KRK_M")
-mpk_path = Path("GTFS_KRK_A")
-trams_path = Path("GTFS_KRK_T")
-
-city_borders = gpd.read_file(
-    "krakow_borders.geojson").to_crs(epsg=cfg.TARGET_CRS)
-
 
 def gtfs_to_seconds(time_series):
     time_parts = time_series.str.split(":", expand=True).astype(int)
     return time_parts[0] * 3600 + time_parts[1] * 60 + time_parts[2]
 
 
-def get_stops_reachability(path, service_id, borders, epsg, time_window_sec: int = 1800, rush_hour_start_sec: int = 25200, rush_hour_end_sec: int = 32400):
-    stop_times = pd.read_csv(Path(path) / "stop_times.txt",
-                             usecols=["trip_id", "departure_time", "stop_id", "pickup_type"])
-    trips = pd.read_csv(Path(path) / "trips.txt",
-                        usecols=["trip_id", "route_id", "service_id", "direction_id"])
-    stops = pd.read_csv(Path(path) / "stops.txt",
-                        usecols=["stop_id", "stop_name", "stop_lat", "stop_lon"])
-    routes = pd.read_csv(Path(path) / "routes.txt",
-                         usecols=["route_id", "route_short_name", "route_type"])
+def get_stops_reachability(
+    path,
+    service_id,
+    borders,
+    epsg,
+    time_window_sec: int = 1800,
+    rush_hour_start_sec: int = 25200,
+    rush_hour_end_sec: int = 32400,
+):
+    stop_times = pd.read_csv(
+        Path(path) / "stop_times.txt",
+        usecols=["trip_id", "departure_time", "stop_id", "pickup_type"],
+    )
+    trips = pd.read_csv(
+        Path(path) / "trips.txt",
+        usecols=["trip_id", "route_id", "service_id", "direction_id"],
+    )
+    stops = pd.read_csv(
+        Path(path) / "stops.txt",
+        usecols=["stop_id", "stop_name", "stop_lat", "stop_lon"],
+    )
+    routes = pd.read_csv(
+        Path(path) / "routes.txt",
+        usecols=["route_id", "route_short_name", "route_type"],
+    )
 
     trip_starts = pd.merge(stop_times, trips, on="trip_id")[
         ["trip_id", "departure_time"]
     ]
 
-    trip_starts["departure_seconds"] = gtfs_to_seconds(
-        trip_starts["departure_time"])
+    trip_starts["departure_seconds"] = gtfs_to_seconds(trip_starts["departure_time"])
 
     trip_starts = trip_starts.groupby("trip_id", as_index=False).agg(
         {"departure_seconds": "min"}
@@ -43,36 +51,29 @@ def get_stops_reachability(path, service_id, borders, epsg, time_window_sec: int
 
     stops_gdf = gpd.GeoDataFrame(
         stops,
-        geometry=gpd.points_from_xy(
-            stops["stop_lon"], stops["stop_lat"]
-        ),
+        geometry=gpd.points_from_xy(stops["stop_lon"], stops["stop_lat"]),
         crs="EPSG:4326",
     )
-    stops_gdf = stops_gdf.drop(
-        columns=["stop_lat", "stop_lon"]).to_crs(epsg=epsg)
+    stops_gdf = stops_gdf.drop(columns=["stop_lat", "stop_lon"]).to_crs(epsg=epsg)
 
     stops_in_borders_map = stops_gdf.sjoin(borders, predicate="within")
     stops_in_borders_array = stops_in_borders_map["stop_id"].array
 
-    all_trips = pd.merge(stop_times, trips,
-                         how="left", on="trip_id")
-    trips_in_borders = all_trips[all_trips["stop_id"].isin(
-        stops_in_borders_array)]
+    all_trips = pd.merge(stop_times, trips, how="left", on="trip_id")
+    trips_in_borders = all_trips[all_trips["stop_id"].isin(stops_in_borders_array)]
     workday_trips = trips_in_borders[trips_in_borders["service_id"] == service_id].drop(
         columns="service_id"
     )
-    workday_trips = workday_trips.assign(departure_seconds=gtfs_to_seconds(
-        workday_trips["departure_time"])
+    workday_trips = workday_trips.assign(
+        departure_seconds=gtfs_to_seconds(workday_trips["departure_time"])
     )
     workday_trips = workday_trips.rename(columns={"stop_id": "starting_stop"}).drop(
         columns="departure_time"
     )
 
-    high_time = workday_trips[workday_trips["trip_id"].isin(
-        high_time_trips)].copy()
+    high_time = workday_trips[workday_trips["trip_id"].isin(high_time_trips)].copy()
 
-    high_time["target_seconds"] = high_time["departure_seconds"] + \
-        time_window_sec
+    high_time["target_seconds"] = high_time["departure_seconds"] + time_window_sec
     target_stops = (
         high_time[["trip_id", "starting_stop", "departure_seconds"]]
         .copy()
@@ -93,9 +94,9 @@ def get_stops_reachability(path, service_id, borders, epsg, time_window_sec: int
     furthest_stops = furthest_stops[furthest_stops["pickup_type"] != 1].drop(
         columns="pickup_type"
     )
-    furthest_stops = furthest_stops.merge(
-        routes, how="left", on="route_id"
-    ).drop(columns=["departure_seconds_x", "departure_seconds_y", "target_seconds"])
+    furthest_stops = furthest_stops.merge(routes, how="left", on="route_id").drop(
+        columns=["departure_seconds_x", "departure_seconds_y", "target_seconds"]
+    )
     furthest_stops = (
         furthest_stops.merge(
             stops_in_borders_map,
@@ -140,8 +141,7 @@ def get_stops_reachability(path, service_id, borders, epsg, time_window_sec: int
         crs=f"EPSG:{epsg}",
     )
     furthest_stops_clean["max_reach_km"] = (
-        furthest_stops_clean.distance(
-            furthest_stops_clean["target_stop_location"])
+        furthest_stops_clean.distance(furthest_stops_clean["target_stop_location"])
         / 1000
     )
     stop_reach = (
@@ -184,16 +184,18 @@ def get_stops_reachability(path, service_id, borders, epsg, time_window_sec: int
     return final_reachability_gdf
 
 
-trams = get_stops_reachability(
-    trams_path, service_id="service_1", borders=city_borders, epsg=cfg.TARGET_CRS
-)
-mobilis = get_stops_reachability(
-    mobilis_path, service_id="1582_PO", borders=city_borders, epsg=cfg.TARGET_CRS
-)
-mpk = get_stops_reachability(
-    mpk_path, service_id="service_1", borders=city_borders, epsg=cfg.TARGET_CRS
-)
+if __name__ == "__main__":
+    city_borders = gpd.read_file(cfg.CITY_BORDERS_GEOJSON).to_crs(epsg=cfg.TARGET_CRS)
+    transport_done = []
+    for carrier_name, carrier_data in cfg.carriers.items():
+        print(f"processing data for carrier {carrier_name}")
+        gdf = get_stops_reachability(
+            path=carrier_data["dir"],
+            service_id=carrier_data["service_id"],
+            borders=city_borders,
+            epsg=cfg.TARGET_CRS,
+        )
+        transport_done.append(gdf)
+    transport_full = pd.concat(transport_done, ignore_index=True)
 
-transport_full = pd.concat([trams, mobilis, mpk], ignore_index=True)
-
-transport_full.to_parquet(cfg.PROCESSED_DIR / "stop_reachability.parquet")
+    transport_full.to_parquet(cfg.PROCESSED_DIR / "stop_reachability.parquet")

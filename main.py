@@ -185,7 +185,7 @@ def main():
     nature_gdf = load_geodata(cfg.NATURE_PARQUET)
     nature_clean_gdf = clean_nature(nature_gdf, cfg.weights)
 
-    hex_gdf = load_geodata(cfg.PROCESSED_DIR / "h3.parquet")
+    hex_gdf = load_geodata(cfg.H3_PARQUET)
 
     # output
     tab1, tab2 = st.tabs(["Place Rating", "Overall Map"])
