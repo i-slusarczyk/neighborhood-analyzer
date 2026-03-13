@@ -1,8 +1,15 @@
+"""
+Configuration module for Urban Quality of Life Scorer
+Acts as a Single Source of Truth for all spatial parameters,
+scoring weights, file paths and distance decay configuration
+"""
+
 from pathlib import Path
 
-BUFFER_RADIUS_METERS = 1800
-TARGET_CRS = 2180
 
+# *******************************
+# FILE PATHS AND DIRECTORY STRUCTURE
+# *******************************
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = ROOT_DIR / "data"
@@ -14,14 +21,25 @@ INDUSTRIAL_PARQUET = PROCESSED_DIR / "krakow_industrial.parquet"
 POI_PARQUET = PROCESSED_DIR / "krakow_poi.parquet"
 FLATS_PARQUET = PROCESSED_DIR / "krakow_flats.parquet"
 REACHABILITY_PARQUET = PROCESSED_DIR / "krakow_stop_reachability.parquet"
+
+CITY_BORDERS_GEOJSON = RAW_DIR / "krakow_borders.geojson"
+
 H3_PARQUET = PROCESSED_DIR / "h3.parquet"
 
-FLAT_COUNT_THRESHOLD = 5
-FLAT_FETCH_RADIUS = 800
+# *******************************
+# SPATIAL SETTINGS AND SCORING THRESHOLDS
+# *******************************
+BUFFER_RADIUS_METERS = 1800
+TARGET_CRS = 2180
 
 # in order: longitude, latitude
 city_center = (19.937989, 50.061466)
 default_point = (19.921678, 50.066130)
+
+FLAT_COUNT_THRESHOLD = 5
+FLAT_FETCH_RADIUS = 800
+
+TRANSPORT_SATURATION_POINT = 180
 
 NATURE_THRESHOLD_STEEPNESS = 0.0012
 NATURE_THRESHOLD_MAX = 0.28
@@ -29,23 +47,40 @@ NATURE_THRESHOLD_MAX = 0.28
 DIST_TO_CENTER_STEEPNESS = 0.002
 DIST_TO_CENTER_MIDPOINT = 2300.0
 
+H3_RESOLUTION = 9
 
-# in standard gtfs tram route type is 0, but for Kraków, for some reason it is 900
+# *******************************
+# TRANSPORT (GTFS) SETTINGS
+# *******************************
+
+# Time window for calculating reachability
+TIME_WINDOW_SEC = 1800 # 30 minutes
+
+# Analysis window for filtering routes
+# Rush hours
+ANALYSIS_START_SEC = 25200 # 7:00 AM
+ANALYSIS_END_SEC = 32400 # 9:00 AM
+
+
+# In the standard GTFS, tram route_type is 0, but for Kraków it is mapped to 900
 TRAM_ROUTE_CODE = 900
 TRAM_COEFFICIENT = 1.5
 
-TRANSPORT_SATURATION_POINT = 180
-
-CITY_BORDERS_GEOJSON = RAW_DIR / "krakow_borders.geojson"
-
-H3_RESOLUTION = 9
-
-# carriers specific for Kraków
+# Carriers specific for Kraków
+# Service IDs were selected to represent a typical Monday schedule
 carriers = {
     "trams": {"dir": RAW_DIR / "GTFS_KRK_T", "service_id": "service_1"},
     "mpk": {"dir": RAW_DIR / "GTFS_KRK_A", "service_id": "service_1"},
     "mobilis": {"dir": RAW_DIR / "GTFS_KRK_M", "service_id": "1582_PO"},
 }
+
+
+# *******************************
+# SCORING ENGINE WEIGHTS
+# Defines global importance of each category,
+# partial weights and saturation points
+# for each subcategory
+# *******************************
 
 weights = {
     "nature": {
@@ -83,13 +118,16 @@ weights = {
         "partial": {"restaurant": 0.4, "cafe": 0.3, "distance_to_center": 0.3},
         "threshold": {"cafe": 20, "restaurant": 40},
     },
-    "transport": {
-        "global": 29.9,
-        "partial": {"tram_stop": 0.70, "bus_stop": 0.30},
-        "threshold": {"tram_stop": 4, "bus_stop": 4},
-    },
+    "transport": {"global": 29.9, "partial": {"tram_stop": 0.70, "bus_stop": 0.30}},
 }
 
+
+# *******************************
+# SPATIAL DYNAMICS (DISTANCE DECAY)
+# optimal_dist: distance within each amenity gets 100% score
+# max_dist: distance after which amenity gets no points anymore
+# power: mathematical steepness of distance penalty (lower is steeper)
+# *******************************
 
 spatial_dynamics = {
     "daily": {

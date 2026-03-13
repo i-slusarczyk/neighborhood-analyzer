@@ -1,3 +1,13 @@
+"""
+Assembles and transforms unzipped GTFS data into reachability metrics
+for the scoring model.
+
+This script calculates the maximum Euclidean distance (in kilometers, straight-line)
+reachable from each public transport stop, without transfers, within a specified
+time window (e.g., 30 minutes) during morning rush hours. The final output
+is exported as a spatial Parquet file containing aggregated stop geometries.
+"""
+
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
@@ -5,6 +15,7 @@ import src.config as cfg
 
 
 def gtfs_to_seconds(time_series):
+    """Converts a GTFS time string column (HH:MM:SS) to total seconds."""
     time_parts = time_series.str.split(":", expand=True).astype(int)
     return time_parts[0] * 3600 + time_parts[1] * 60 + time_parts[2]
 
@@ -14,10 +25,28 @@ def get_stops_reachability(
     service_id,
     borders,
     epsg,
-    time_window_sec: int = 1800,
-    rush_hour_start_sec: int = 25200,
-    rush_hour_end_sec: int = 32400,
+    time_window_sec: int = cfg.TIME_WINDOW_SEC,
+    period_start_sec: int = cfg.ANALYSIS_START_SEC,
+    period_end_sec: int = cfg.ANALYSIS_END_SEC,
 ):
+    """
+    Calculates the maximum reachability radius (straight-line distance) for public transport stops.
+
+    Args:
+        path (str or Path): Path to the folder containing unzipped GTFS data for a single carrier.
+        service_id (str): Identifier for the specific schedule to process (e.g., workdays schedule).
+        borders (gpd.GeoDataFrame): Polygon used to clip stops strictly to the evaluated area (e.g., city borders).
+        epsg (int): EPSG code for the target coordinate reference system.
+        time_window_sec (int, optional): Timeframe for calculating maximum reachability in seconds. Defaults to cfg.TIME_WINDOW_SEC.
+        period_start_sec (int, optional): Start of the analytical time window in seconds from midnight. Defaults to cfg.ANALYSIS_START_SEC.
+        period_end_sec (int, optional): End of the analytical time window in seconds from midnight. Defaults to cfg.ANALYSIS_END_SEC.
+
+    Returns:
+        gpd.GeoDataFrame: Aggregated spatial data containing the calculated 'max_reach_km' (Euclidean distance) for each stop.
+    """
+    # *******************************
+    # Load GTFS data
+    # *******************************
     stop_times = pd.read_csv(
         Path(path) / "stop_times.txt",
         usecols=["trip_id", "departure_time", "stop_id", "pickup_type"],
@@ -34,7 +63,9 @@ def get_stops_reachability(
         Path(path) / "routes.txt",
         usecols=["route_id", "route_short_name", "route_type"],
     )
-
+    # *******************************
+    # Filter trips by rush hour
+    # *******************************
     trip_starts = pd.merge(stop_times, trips, on="trip_id")[
         ["trip_id", "departure_time"]
     ]
@@ -45,10 +76,14 @@ def get_stops_reachability(
         {"departure_seconds": "min"}
     )
 
+    # Identify trips that start within the given time window
     high_time_trips = trip_starts.query(
-        f"departure_seconds>={rush_hour_start_sec} and departure_seconds<={rush_hour_end_sec}"
+        f"departure_seconds>={period_start_sec} and departure_seconds<={period_end_sec}"
     )["trip_id"].array
 
+    # *******************************
+    # Spatial filtering
+    # *******************************
     stops_gdf = gpd.GeoDataFrame(
         stops,
         geometry=gpd.points_from_xy(stops["stop_lon"], stops["stop_lat"]),
@@ -56,10 +91,17 @@ def get_stops_reachability(
     )
     stops_gdf = stops_gdf.drop(columns=["stop_lat", "stop_lon"]).to_crs(epsg=epsg)
 
+    # Keep only the stops within the given borders (Polygon)
     stops_in_borders_map = stops_gdf.sjoin(borders, predicate="within")
     stops_in_borders_array = stops_in_borders_map["stop_id"].array
 
+    # *******************************
+    # Prepare operational data
+    # *******************************
     all_trips = pd.merge(stop_times, trips, how="left", on="trip_id")
+
+    # Filter for stops within borders and a specific schedule 
+    # (service_id from calendar.txt, e.g., typical workday)
     trips_in_borders = all_trips[all_trips["stop_id"].isin(stops_in_borders_array)]
     workday_trips = trips_in_borders[trips_in_borders["service_id"] == service_id].drop(
         columns="service_id"
@@ -71,8 +113,12 @@ def get_stops_reachability(
         columns="departure_time"
     )
 
+    # Keep only trips within the given time window
     high_time = workday_trips[workday_trips["trip_id"].isin(high_time_trips)].copy()
 
+    # *******************************
+    # Calculate reachability within given time window
+    # *******************************
     high_time["target_seconds"] = high_time["departure_seconds"] + time_window_sec
     target_stops = (
         high_time[["trip_id", "starting_stop", "departure_seconds"]]
@@ -80,9 +126,11 @@ def get_stops_reachability(
         .rename(columns={"starting_stop": "target_stop"})
     )
 
+    # Sorting required for merge_asof
     high_time = high_time.sort_values("target_seconds")
     target_stops = target_stops.sort_values("departure_seconds")
 
+    # Find the furthest reachable stop within the time window using a backward merge
     furthest_stops = pd.merge_asof(
         left=high_time,
         right=target_stops,
@@ -91,12 +139,19 @@ def get_stops_reachability(
         right_on="departure_seconds",
         direction="backward",
     )
+    # Filter out start stops where passenger boarding is prohibited (GTFS pickup_type == 1)
     furthest_stops = furthest_stops[furthest_stops["pickup_type"] != 1].drop(
         columns="pickup_type"
     )
+
+    # *******************************
+    # Enrich data with geometries and route details
+    # *******************************
     furthest_stops = furthest_stops.merge(routes, how="left", on="route_id").drop(
         columns=["departure_seconds_x", "departure_seconds_y", "target_seconds"]
     )
+
+    # Attach geometries to both starting and target stops
     furthest_stops = (
         furthest_stops.merge(
             stops_in_borders_map,
@@ -122,9 +177,12 @@ def get_stops_reachability(
             }
         )
     )
+    # Remove the cases where target stop is the same as the starting stop
     furthest_stops = furthest_stops[
         furthest_stops["starting_stop_name"] != furthest_stops["target_stop_name"]
     ]
+
+    # Calculate straight-line distances between starting and target stops
     furthest_stops_clean = gpd.GeoDataFrame(
         furthest_stops[
             [
@@ -140,10 +198,20 @@ def get_stops_reachability(
         geometry="starting_stop_location",
         crs=f"EPSG:{epsg}",
     )
+
+    # *******************************
+    # Calculate Euclidean distance
+    # *******************************
     furthest_stops_clean["max_reach_km"] = (
         furthest_stops_clean.distance(furthest_stops_clean["target_stop_location"])
         / 1000
     )
+
+    # *******************************
+    # Aggregate final metrics
+    # *******************************
+
+    # Average max reach per route and direction from a given stop
     stop_reach = (
         furthest_stops_clean.groupby(
             [
@@ -164,6 +232,8 @@ def get_stops_reachability(
             }
         )
     )
+
+    # Sum the average reachability of routes servicing the stop
     final_reachability = (
         stop_reach.groupby(
             [

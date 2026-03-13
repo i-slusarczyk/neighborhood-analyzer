@@ -3,21 +3,51 @@ import src.config as cfg
 
 
 def calculate_full_score(
-    lon,
-    lat,
+    lon: float,
+    lat: float,
     poi_gdf,
     industrial_gdf,
     reachability_gdf,
     nature_gdf,
     flats_gdf,
-    city_center,
-    return_layers=False,
+    city_center: tuple,
+    return_layers: bool =False,
 ) -> dict:
+    """
+    Computes a comprehensive spatial score for a single geographic point.
+
+    The score evaluates the local neighborhood based on multiple weighted components:
+    proximity to nature, child-friendly infrastructure, daily amenities, transport reachability,
+    and cultural POIs. It penalizes the score based on industrial destructors and calculates 
+    an investment value ratio using the local median flat price.
+
+    Args:
+        lon (float): Longitude of the evaluated point.
+        lat (float): Latitude of the evaluated point.
+        poi_gdf (gpd.GeoDataFrame): City-wide points of interest (amenities, culture, etc.).
+        industrial_gdf (gpd.GeoDataFrame): City-wide industrial areas (destructors).
+        reachability_gdf (gpd.GeoDataFrame): Public transport reachability data.
+        nature_gdf (gpd.GeoDataFrame): Greenery and nature polygons.
+        flats_gdf (gpd.GeoDataFrame): Real estate listings data.
+        city_center (tuple): Coordinates of the city center as (longitude, latitude).
+        return_layers (bool, optional): If True, includes the locally clipped GeoDataFrames 
+            used for scoring in the result dictionary. Defaults to False.
+
+    Returns:
+        dict: A dictionary containing the 'final_score', 'base_score', specific 'component_scores',
+            applied 'destructors', 'median_price', the calculated 'value_ratio', and optionally 
+            the local geometry 'layers'.
+    """
+
+    # Distance to the city center
     distance_to_center = ut.get_distance_to_center(
         lon, lat, city_center[0], city_center[1]
     )
+    
+    # *******************************
+    # Calculations
+    # *******************************
 
-    # calculations
     local_flats = ut.points_in_radius(
         flats_gdf, lon, lat, radius=cfg.FLAT_FETCH_RADIUS, add_distance_col=False
     )

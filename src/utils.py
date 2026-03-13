@@ -12,7 +12,7 @@ def get_target_point(lon: float, lat: float) -> gpd.GeoSeries:
     )
 
 
-# selecting just the points within radius
+# selecting just the poi within radius
 def points_in_radius(
     gdf: gpd.GeoDataFrame,
     lon: float,
@@ -20,15 +20,25 @@ def points_in_radius(
     radius: int = cfg.BUFFER_RADIUS_METERS,
     add_distance_col: bool = True,
 ) -> gpd.GeoDataFrame:
-    target_point = get_target_point(lon, lat)
 
-    distances = gdf.geometry.distance(target_point.iloc[0])
+    target_point = get_target_point(lon, lat).iloc[0]
+    target_buffer = target_point.buffer(radius)
 
+    possible_matches_index = gdf.sindex.query(target_buffer, predicate="intersects")
+    possible_matches = gdf.iloc[possible_matches_index].copy()
+
+    if possible_matches.empty:
+        if add_distance_col:
+            possible_matches["distance"] = pd.Series(dtype=float)
+        return possible_matches
+
+    distances = possible_matches.geometry.distance(target_point)
     mask = distances <= radius
-    gdf_filtered = gdf.loc[mask].copy()
+    gdf_filtered = possible_matches.loc[mask].copy()
 
     if add_distance_col:
-        gdf_filtered["distance"] = distances
+        gdf_filtered["distance"] = distances.loc[mask]
+
     return gdf_filtered
 
 
@@ -39,19 +49,27 @@ def clip_to_buffer(
     lat: float,
     radius: int = cfg.BUFFER_RADIUS_METERS,
 ) -> gpd.GeoDataFrame:
-    target_point = get_target_point(lon, lat)
+    target_point = get_target_point(lon, lat).iloc[0]
+    target_buffer = target_point.buffer(radius)
 
-    gdf_target_buffer = target_point.buffer(radius)
-    gdf_clipped = gpd.clip(gdf, gdf_target_buffer)
 
-    gdf_clipped["distance"] = gdf_clipped.geometry.distance(target_point.iloc[0])
+    possible_matches_index = gdf.sindex.query(target_buffer, predicate="intersects")
+    possible_matches = gdf.iloc[possible_matches_index]
+
+    if possible_matches.empty:
+        possible_matches["distance"] = pd.Series(dtype=float)
+        return possible_matches
+
+    gdf_clipped = gpd.clip(possible_matches, target_buffer)
+
+    gdf_clipped["distance"] = gdf_clipped.geometry.distance(target_point)
     return gdf_clipped
 
 
 # applying distance decay function
 def apply_distance_decay(
     distances: pd.Series, max_dist: float, optimal_dist: float, power: float = math.e
-) -> float:
+) -> pd.Series:
     clipped_dist = distances.clip(lower=optimal_dist, upper=max_dist)
 
     normalized_dist = (clipped_dist - optimal_dist) / (max_dist - optimal_dist)
@@ -75,9 +93,9 @@ def get_count_adjusted(
     category_dynamics = dynamics[category]
 
     for subcategory in category_dynamics:
-        category_max_dist = dynamics[subcategory]["max_dist"]
-        category_optimal_dist = dynamics[subcategory]["optimal_dist"]
-        category_power = dynamics[subcategory]["power"]
+        category_max_dist = category_dynamics[subcategory]["max_dist"]
+        category_optimal_dist = category_dynamics[subcategory]["optimal_dist"]
+        category_power = category_dynamics[subcategory]["power"]
 
         mask = gdf["category"] == subcategory
 
@@ -180,7 +198,7 @@ def nature_score(
     dynamics,
     radius: int = cfg.BUFFER_RADIUS_METERS,
 ) -> float:
-    adjusted_gdf = get_count_adjusted(gdf, "nature", dynamics)
+    adjusted_gdf = get_count_adjusted(gdf=gdf, category="nature", dynamics=dynamics)
 
     if not adjusted_gdf.empty:
         adjusted_gdf["area_adjusted"] = (
@@ -209,7 +227,7 @@ def nature_score(
 
 # score for daily infastructure
 def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict) -> float:
-    adjusted_gdf = get_count_adjusted(gdf, "daily", dynamics)
+    adjusted_gdf = get_count_adjusted(gdf=gdf, category="daily", dynamics=dynamics)
 
     partial = weights["daily"]["partial"]
     thresholds = weights["daily"]["threshold"]
@@ -233,7 +251,7 @@ def daily_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict) -> float:
 def culture_score(
     gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict, distance_to_center: int
 ) -> float:
-    adjusted_gdf = get_count_adjusted(gdf, "culture", dynamics)
+    adjusted_gdf = get_count_adjusted(gdf=gdf, category="culture", dynamics=dynamics)
 
     partial = weights["culture"]["partial"]
     thresholds = weights["culture"]["threshold"]
@@ -266,9 +284,9 @@ def destructors(
     weights: dict,
     radius: int = cfg.BUFFER_RADIUS_METERS,
 ) -> float:
-    adjusted_gdf_poi = get_count_adjusted(gdf_poi, "destructors", dynamics)
+    adjusted_gdf_poi = get_count_adjusted(gdf=gdf_poi, category="destructors", dynamics=dynamics)
     adjusted_gdf_industrial = get_count_adjusted(
-        gdf_industrial, "destructors", dynamics
+        gdf_industrial, category="destructors", dynamics=dynamics
     )
 
     if not adjusted_gdf_industrial.empty:
@@ -308,7 +326,7 @@ def destructors(
 
 # access to children infrastructure
 def children_score(gdf: gpd.GeoDataFrame, weights: dict, dynamics: dict) -> float:
-    adjusted_gdf = get_count_adjusted(gdf, "children", dynamics)
+    adjusted_gdf = get_count_adjusted(gdf=gdf, category="children", dynamics=dynamics)
 
     partial = weights["children"]["partial"]
     thresholds = weights["children"]["threshold"]
@@ -345,7 +363,7 @@ def transport_score(
         gdf_transport["route_type"] == cfg.TRAM_ROUTE_CODE, "category"
     ] = "tram_stop"
 
-    adjusted_gdf = get_count_adjusted(gdf_transport, "transport", dynamics)
+    adjusted_gdf = get_count_adjusted(gdf=gdf_transport, dynamics=dynamics, category="transport")
 
     # bonus points for trams reliability
     is_tram = adjusted_gdf["route_type"] == cfg.TRAM_ROUTE_CODE
