@@ -1,10 +1,10 @@
 """
-Generates an H3 hexagonal grid over the defined city borders and calculates 
+Generates an H3 hexagonal grid over the defined city borders and calculates
 a comprehensive spatial score for each cell.
 
-This script acts as the main execution pipeline for the scoring model. It loads 
-preprocessed spatial layers (POIs, nature, industrial, reachability, flats), 
-constructs an H3 grid at a specified resolution, and applies the scoring 
+This script acts as the main execution pipeline for the scoring model. It loads
+preprocessed spatial layers (POIs, nature, industrial, reachability, flats),
+constructs an H3 grid at a specified resolution, and applies the scoring
 algorithm to evaluate the real estate attractiveness of each hexagon.
 """
 
@@ -55,7 +55,7 @@ def main():
     results = []
     geometries = []
 
-    #Calculate score for each individual hex cell
+    # Calculate score for each individual hex cell
     for hex_id in tqdm(hexagons):
         lat, lon = h3.cell_to_latlng(hex_id)
 
@@ -81,8 +81,7 @@ def main():
             }
         )
 
-
-        #Extract hex boundary points to create the hex polygon
+        # Extract hex boundary points to create the hex polygon
         boundary = h3.cell_to_boundary(hex_id)
 
         # H3 returns (lat, lon), but Shapely expects (lon, lat)

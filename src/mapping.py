@@ -1,10 +1,33 @@
+"""
+Geospatial visualization module for the scoring model.
+
+Provides functions to generate interactive Folium maps:
+- Macro View: A hexagonal grid overview of the entire city, comparing price-to-quality ratios.
+- Micro View: A detailed breakdown of individual scoring layers (POI, nature, transport)
+  for a specific location.
+"""
+
 import pandas as pd
 import folium
 import src.config as cfg
 
 
 def gen_macro_map(_hex_gdf, city_center=cfg.city_center):
+    """
+    Generates an interactive city-wide map with hexagonal scoring layers.
+
+    Args:
+        _hex_gdf (gpd.GeoDataFrame): The scored H3 hexagonal grid.
+        city_center (tuple, optional): Map center coordinates (lon, lat). Defaults to cfg.city_center.
+
+    Returns:
+        folium.Map: A map object with switchable layers for 'Final Score', 'Median Price',
+            and 'Price for Point' (value ratio).
+    """
+
     hex_gdf = _hex_gdf.copy()
+
+    # Creating more user-friendly data format for visualization
     hex_gdf = hex_gdf.assign(
         score_display=hex_gdf["final_score"].apply(
             lambda x: f"{x:.1f} pts" if pd.notna(x) else "No data available"
@@ -32,6 +55,7 @@ def gen_macro_map(_hex_gdf, city_center=cfg.city_center):
         tiles="CartoDB Positron",
         name="CartoDB Positron",
     ).add_to(m_macro)
+
     hex_gdf.explore(
         column="value_ratio",
         scheme="Quantiles",
@@ -44,6 +68,7 @@ def gen_macro_map(_hex_gdf, city_center=cfg.city_center):
         legend=False,
         show=True,
     )
+
     hex_gdf.explore(
         column="final_score",
         cmap="RdYlGn",
@@ -58,7 +83,7 @@ def gen_macro_map(_hex_gdf, city_center=cfg.city_center):
     hex_gdf.explore(
         column="median_price",
         scheme="Quantiles",
-        # 15 quantiles is a lot, but I use them just to get more variety in colors - not to actually utilize quantiles
+        # Higher 'k' value used for finer color graduation
         k=15,
         cmap="viridis",
         tooltip=["score_display", "median_display", "value_ratio_display"],
@@ -75,6 +100,22 @@ def gen_macro_map(_hex_gdf, city_center=cfg.city_center):
 
 
 def gen_micro_map(layers, session_state):
+    """
+    Generates a detailed map of a specific area showing all scoring components.
+
+    Visualizes individual data layers (Nature, Transport, POIs) within the scoring buffer
+    to provide context for the calculated score.
+
+    Args:
+        layers (dict): Dictionary of GeoDataFrames (nature, transport, poi, etc.)
+            clipped to the local buffer.
+        session_state (object): State object containing current pin location and map settings.
+
+    Returns:
+        folium.Map: A detailed map with categorized and interactive spatial features.
+    """
+
+    # Importing Streamlit data
     m_base = folium.Map(
         location=[session_state.map_center_lat, session_state.map_center_lon],
         zoom_start=session_state.map_zoom,
@@ -87,6 +128,7 @@ def gen_micro_map(layers, session_state):
 
         layer_gdf = layer_data.copy()
 
+        # Default visible layer
         is_visible = layer_key == "nature"
 
         if layer_key != "transport" and not layer_gdf.empty:
@@ -94,6 +136,7 @@ def gen_micro_map(layers, session_state):
                 ~layer_gdf.geometry.is_empty & layer_gdf.geometry.notna()
             ]
 
+        # Empty layers remain visible in menu
         if layer_gdf.empty:
             folium.FeatureGroup(name=layer_name, show=is_visible).add_to(m_base)
             continue
@@ -112,12 +155,11 @@ def gen_micro_map(layers, session_state):
         elif layer_key == "transport":
             layer_gdf = layer_gdf.assign(
                 category=layer_gdf["route_type"].apply(
-                    lambda x: (
-                        "Tram Stop" if x == cfg.TRAM_ROUTE_CODE else "Bus Stop"  # to do
-                    )
+                    lambda x: "Tram Stop" if x == cfg.TRAM_ROUTE_CODE else "Bus Stop"
                 ),
                 reach_pretty=layer_gdf["max_reach_km"].apply(lambda x: f"{x:.2f} km"),
             )
+
             layer_gdf.explore(
                 m=m_base,
                 name=layer_name,
@@ -125,7 +167,9 @@ def gen_micro_map(layers, session_state):
                 column="category",
                 cmap="Set1",
                 tooltip=["category", "stop_name", "reach_pretty"],
-                tooltip_kwds={"aliases": ["Category", "Name", "Unique kilometers"]},
+                tooltip_kwds={
+                    "aliases": ["Category", "Name", "Reachable distance (Unique)"]
+                },
                 marker_kwds={"radius": 3.5},
                 legend=False,
             )
@@ -142,6 +186,7 @@ def gen_micro_map(layers, session_state):
                 legend=False,
             )
 
+    # Adding Marker on the location of last click
     folium.Marker(location=(session_state.pin_lat, session_state.pin_lon)).add_to(
         m_base
     )

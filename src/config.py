@@ -54,12 +54,12 @@ H3_RESOLUTION = 9
 # *******************************
 
 # Time window for calculating reachability
-TIME_WINDOW_SEC = 1800 # 30 minutes
+TIME_WINDOW_SEC = 1800  # 30 minutes
 
 # Analysis window for filtering routes
 # Rush hours
-ANALYSIS_START_SEC = 25200 # 7:00 AM
-ANALYSIS_END_SEC = 32400 # 9:00 AM
+ANALYSIS_START_SEC = 25200  # 7:00 AM
+ANALYSIS_END_SEC = 32400  # 9:00 AM
 
 
 # In the standard GTFS, tram route_type is 0, but for Kraków it is mapped to 900

@@ -11,14 +11,14 @@ def calculate_full_score(
     nature_gdf,
     flats_gdf,
     city_center: tuple,
-    return_layers: bool =False,
+    return_layers: bool = False,
 ) -> dict:
     """
     Computes a comprehensive spatial score for a single geographic point.
 
     The score evaluates the local neighborhood based on multiple weighted components:
     proximity to nature, child-friendly infrastructure, daily amenities, transport reachability,
-    and cultural POIs. It penalizes the score based on industrial destructors and calculates 
+    and cultural POIs. It penalizes the score based on industrial destructors and calculates
     an investment value ratio using the local median flat price.
 
     Args:
@@ -30,12 +30,12 @@ def calculate_full_score(
         nature_gdf (gpd.GeoDataFrame): Greenery and nature polygons.
         flats_gdf (gpd.GeoDataFrame): Real estate listings data.
         city_center (tuple): Coordinates of the city center as (longitude, latitude).
-        return_layers (bool, optional): If True, includes the locally clipped GeoDataFrames 
+        return_layers (bool, optional): If True, includes the locally clipped GeoDataFrames
             used for scoring in the result dictionary. Defaults to False.
 
     Returns:
         dict: A dictionary containing the 'final_score', 'base_score', specific 'component_scores',
-            applied 'destructors', 'median_price', the calculated 'value_ratio', and optionally 
+            applied 'destructors', 'median_price', the calculated 'value_ratio', and optionally
             the local geometry 'layers'.
     """
 
@@ -43,7 +43,7 @@ def calculate_full_score(
     distance_to_center = ut.get_distance_to_center(
         lon, lat, city_center[0], city_center[1]
     )
-    
+
     # *******************************
     # Calculations
     # *******************************

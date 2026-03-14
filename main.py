@@ -1,3 +1,14 @@
+"""
+Main application module for the Neighborhood Analyzer.
+
+This Streamlit application serves as the frontend for the geospatial scoring model.
+It provides an interactive dashboard with two main views:
+1. Place Rating (Micro): Evaluates a specific point clicked by the user, dynamically
+   calculating its livability score and rendering local POIs, nature, and transport layers.
+2. Overall Map (Macro): Displays the pre-calculated H3 hexagonal grid for the entire
+   city, highlighting top-tier locations based on pure score and value-for-money ratio.
+"""
+
 import geopandas as gpd
 from geopy.geocoders import Nominatim
 import streamlit as st
@@ -7,23 +18,55 @@ import src.utils as ut
 import src.scoring as scoring
 import src.mapping as gen_map
 
+# Must be the first Streamlit command
 st.set_page_config(page_title="Kraków QoL", layout="wide")
 
 
 @st.cache_data
-# loading data from parquet files
 def load_geodata(file_path):
+    """
+    Loads spatial data from Parquet files and caches the result to prevent
+    costly disk reads during Streamlit reruns.
+
+    Args:
+        file_path (str): Path to the .parquet file.
+
+    Returns:
+        gpd.GeoDataFrame: The loaded spatial dataset.
+    """
     return gpd.read_parquet(file_path)
 
 
 @st.cache_data(max_entries=1)
-# cleaning intersecting nature
 def clean_nature(_gdf: gpd.GeoDataFrame, weights: dict):
+    """
+    Resolves overlaps in natural areas to prevent double-counting of geometries.
+    Uses caching as topological operations (gpd.overlay) are computationally heavy.
+
+    Args:
+        _gdf (gpd.GeoDataFrame): Raw nature polygons.
+        weights (dict): Weight configuration to determine priority during clipping.
+
+    Returns:
+        gpd.GeoDataFrame: Cleaned, non-overlapping nature polygons.
+    """
     return ut.intersecting_nature(_gdf, weights)
 
 
 @st.cache_data
 def cache_top_hexagons(_gdf, sorting_col):
+    """
+    Extracts the top 3 scoring hexagons from the city-wide grid and uses reverse
+    geocoding to fetch their human-readable street addresses.
+
+    Args:
+        _gdf (gpd.GeoDataFrame): The fully scored H3 grid.
+        sorting_col (str): Column name to sort by ('final_score' or 'value_ratio').
+
+    Returns:
+        gpd.GeoDataFrame: A subset containing only the top 3 records with an added
+        'address' column.
+    """
     geocoder = Nominatim(user_agent="krakow qol scorer")
 
     def get_address(row):
@@ -37,6 +80,7 @@ def cache_top_hexagons(_gdf, sorting_col):
 
     needed_cols = ["final_score", "value_ratio", "median_price", "geometry"]
 
+    # Value ratio (price per point) should be minimized (lowest is best value)
     if sorting_col == "value_ratio":
         top_hex_gdf = (
             _gdf.sort_values(by=sorting_col, ascending=True)
@@ -44,6 +88,7 @@ def cache_top_hexagons(_gdf, sorting_col):
             .copy()
             .reset_index()
         )
+    # Total score should be maximized
     else:
         top_hex_gdf = (
             _gdf.sort_values(by=sorting_col, ascending=False)
@@ -58,6 +103,13 @@ def cache_top_hexagons(_gdf, sorting_col):
 
 
 def render_scoring_panel(result):
+    """
+    Renders the UI dashboard components (metrics) for the dynamically calculated score.
+
+    Args:
+        result (dict): Dictionary output from scoring.calculate_full_score() containing
+            base scores, component breakdowns, and pricing details.
+    """
     st.markdown("### Scoring Details")
     c1, c2 = st.columns(2)
     categories = list(result["component_scores"].items())
@@ -95,6 +147,13 @@ def render_scoring_panel(result):
 
 
 def render_best_hexagons(hex_gdf):
+    """
+    Renders the UI sidebar listing the top-rated locations in the city based on
+    overall livability score and investment value ratio.
+
+    Args:
+        hex_gdf (gpd.GeoDataFrame): The scored H3 grid.
+    """
     top_score_hex_gdf = cache_top_hexagons(hex_gdf, "final_score")
     top_value_hex_gdf = cache_top_hexagons(hex_gdf, "value_ratio")
 
@@ -119,10 +178,11 @@ def render_best_hexagons(hex_gdf):
         col_m3.caption(f"Ratio: **{row.value_ratio:.0f} zł/pt**")
 
 
-# streamlit initial variables
-
-
 def init_session_state(default_point):
+    """
+    Initializes Streamlit session variables to persist map state (zoom, center, pin location)
+    across application reruns.
+    """
     if "pin_lat" not in st.session_state:
         st.session_state.pin_lon = default_point[0]
         st.session_state.pin_lat = default_point[1]
@@ -131,8 +191,15 @@ def init_session_state(default_point):
         st.session_state.map_zoom = 14
 
 
-# handling changing selected point on map
 def handle_map_interactions(map_data):
+    """
+    Listens to Folium map events (clicks, panning, zooming). If the user clicks
+    a new location, it updates session variables and triggers a full UI rerun
+    to recalculate scores for the new coordinate.
+
+    Args:
+        map_data (dict): Dictionary payload returned by the streamlit-folium component.
+    """
     if map_data and map_data.get("last_clicked"):
         clicked_lat = map_data["last_clicked"]["lat"]
         clicked_lon = map_data["last_clicked"]["lng"]
@@ -154,8 +221,8 @@ def handle_map_interactions(map_data):
 
 
 def main():
-
-    # smaller top margin
+    """Application entry point handling data loading and layout construction."""
+    # Custom CSS to reduce top margin padding in Streamlit
     st.markdown(
         """
         <style>
@@ -175,7 +242,7 @@ def main():
 
     init_session_state(cfg.default_point)
 
-    # loading data
+    # 1. Load Data (Leveraging @st.cache_data)
     poi_gdf = load_geodata(cfg.POI_PARQUET)
 
     flats_gdf = load_geodata(cfg.FLATS_PARQUET)
@@ -187,7 +254,7 @@ def main():
 
     hex_gdf = load_geodata(cfg.H3_PARQUET)
 
-    # output
+    # 2. Build UI Layout
     tab1, tab2 = st.tabs(["Place Rating", "Overall Map"])
 
     with tab1:
@@ -196,16 +263,17 @@ def main():
         pin_lon = st.session_state.pin_lon
         pin_lat = st.session_state.pin_lat
 
+        # Dynamically calculate the score for the selected pin
         result = scoring.calculate_full_score(
-            pin_lon,
-            pin_lat,
-            poi_gdf,
-            industrial_gdf,
-            reachability_gdf,
-            nature_clean_gdf,
-            flats_gdf,
-            cfg.city_center,
-            True,
+            lon=pin_lon,
+            lat=pin_lat,
+            poi_gdf=poi_gdf,
+            industrial_gdf=industrial_gdf,
+            reachability_gdf=reachability_gdf,
+            nature_gdf=nature_clean_gdf,
+            flats_gdf=flats_gdf,
+            city_center=cfg.city_center,
+            return_layers=True,
         )
         layers = result["layers"]
 

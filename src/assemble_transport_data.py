@@ -100,7 +100,7 @@ def get_stops_reachability(
     # *******************************
     all_trips = pd.merge(stop_times, trips, how="left", on="trip_id")
 
-    # Filter for stops within borders and a specific schedule 
+    # Filter for stops within borders and a specific schedule
     # (service_id from calendar.txt, e.g., typical workday)
     trips_in_borders = all_trips[all_trips["stop_id"].isin(stops_in_borders_array)]
     workday_trips = trips_in_borders[trips_in_borders["service_id"] == service_id].drop(
