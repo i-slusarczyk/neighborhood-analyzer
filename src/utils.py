@@ -2,14 +2,15 @@ import math
 import geopandas as gpd
 import pandas as pd
 import shapely
+from pyproj import Transformer
 import src.config as cfg
 
+_TRANSFORMER = Transformer.from_crs("EPSG:4326", f"EPSG:{cfg.TARGET_CRS}", always_xy=True)
 
 # pin on the map as gpd series
 def get_target_point(lon: float, lat: float) -> gpd.GeoSeries:
-    return gpd.GeoSeries([shapely.Point(lon, lat)], crs="EPSG:4326").to_crs(
-        epsg=cfg.TARGET_CRS
-    )
+    x,y = _TRANSFORMER.transform(lon, lat)
+    return shapely.Point(x,y)
 
 
 # selecting just the poi within radius
@@ -21,7 +22,7 @@ def points_in_radius(
     add_distance_col: bool = True,
 ) -> gpd.GeoDataFrame:
 
-    target_point = get_target_point(lon, lat).iloc[0]
+    target_point = get_target_point(lon, lat)
     target_buffer = target_point.buffer(radius)
 
     possible_matches_index = gdf.sindex.query(target_buffer, predicate="intersects")
@@ -49,7 +50,7 @@ def clip_to_buffer(
     lat: float,
     radius: int = cfg.BUFFER_RADIUS_METERS,
 ) -> gpd.GeoDataFrame:
-    target_point = get_target_point(lon, lat).iloc[0]
+    target_point = get_target_point(lon, lat)
     target_buffer = target_point.buffer(radius)
 
 
@@ -152,9 +153,9 @@ def calculate_nature_threshold_exp(
 def get_distance_to_center(
     lon: float, lat: float, city_center_lon: float, city_center_lat: float
 ):
-    center_series = get_target_point(city_center_lon, city_center_lat)
-    pin_series = get_target_point(lon, lat)
-    return pin_series.distance(center_series).iloc[0]
+    center_point = get_target_point(city_center_lon, city_center_lat)
+    pin_point = get_target_point(lon, lat)
+    return pin_point.distance(center_point)
 
 
 # sigmoid function assigning points based on distance to city center
