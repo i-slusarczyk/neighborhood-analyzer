@@ -15,7 +15,7 @@ The model utilizes the Uber H3 hexagonal grid to aggregate thousands of spatial 
 
 ## 💡 Key Urban & Business Insights
 * **The "Prestige Trap" (Wola Justowska):** High real estate prices do not always correlate with a high Quality of Life score. Premium locations often suffer from poor urban infrastructure, lacking basic walkability and POI density.
-* **The "Communist-Era" Urban Efficiency:** Older residential districts (like Nowa Huta or large-panel system blocks) naturally score very high in the 15-minute city framework due to centrally planned infrastructure (schools, parks, transport), making them highly undervalued on the real estate market.
+* **The "Communist-Era" Urban Efficiency:** Older residential districts (like Nowa Huta or large-panel system blocks) consistently achieve top Livability Scores due to their centrally planned spatial layout. The combination of highly accessible daily infrastructure (schools, parks, transport) and lower property prices makes these locations highly **cost-effective**, offering the best QoL-to-price ratio on the market.
 
 ## 🚀 Engineering Architecture & Optimizations
 Processing millions of spatial relationships required shifting from standard scripts to optimized data pipelines:
