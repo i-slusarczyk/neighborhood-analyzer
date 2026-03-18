@@ -13,6 +13,10 @@ The model utilizes the Uber H3 hexagonal grid to aggregate thousands of spatial 
 * **PropTech & Real Estate Investment:** Automated discovery of "investment gems" – locations with a high livability score but a price per square meter below the market median (*Value Ratio*).
 * **Transport Reliability:** The engine processes raw GTFS schedules to calculate actual transfer-free transit reachability, heavily rewarding reliable rail communication (trams).
 
+## 💡 Key Urban & Business Insights
+* **The "Prestige Trap" (Wola Justowska):** High real estate prices do not always correlate with a high Quality of Life score. Premium locations often suffer from poor urban infrastructure, lacking basic walkability and POI density.
+* **The "Communist-Era" Urban Efficiency:** Older residential districts (like Nowa Huta or large-panel system blocks) naturally score very high in the 15-minute city framework due to centrally planned infrastructure (schools, parks, transport), making them highly undervalued on the real estate market.
+
 ## 🚀 Engineering Architecture & Optimizations
 Processing millions of spatial relationships required shifting from standard scripts to optimized data pipelines:
 * **Spatial Indexing (`sindex`):** Implemented a *Filter & Refine* pattern based on R-Trees. Pre-filtering data discards geometries outside the area of interest, reducing spatial query time by over 90%.
