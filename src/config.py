@@ -36,6 +36,9 @@ TARGET_CRS = 2180
 city_center = (19.937989, 50.061466)
 default_point = (19.921678, 50.066130)
 
+FLATS_DATA_CITY_NAME = "krakow"
+OSMNX_CITY_NAME = "Kraków, Poland"
+
 FLAT_COUNT_THRESHOLD = 5
 FLAT_FETCH_RADIUS = 800
 
@@ -163,4 +166,32 @@ spatial_dynamics = {
         "tram_stop": {"optimal_dist": 400, "max_dist": 1000, "power": 0.67},
         "bus_stop": {"optimal_dist": 400, "max_dist": 1000, "power": 0.67},
     },
+}
+
+# *******************************
+# OSMnx FETCHING SETTINGS
+# key: category_name in output gdf
+# value: OSM tags assigned to the category
+# *******************************
+
+osmnx_poi_config = {
+    "cafe": {"amenity": "cafe"},
+    "restaurant": {"amenity": ["restaurant", "bar", "pub"]},
+    "convenience": {"shop": "convenience"},
+    "supermarket": {"shop": "supermarket"},
+    "school": {"amenity": "school"},
+    "kindergarten": {"amenity": "kindergarten"},
+    "pharmacy": {"amenity": "pharmacy"},
+    "clinic": {"amenity": "clinic"},
+    "industrial": {"landuse": "industrial"},
+    "abandoned": {"building": ["ruins", "abandoned"]},
+    "liquor_store": {"shop": "alcohol"},
+    "community_centre": {"amenity": "community_centre"},
+    "playground": {"leisure": "playground"},
+    "park": {"leisure": "park", "landuse": "recreation_ground"},
+    "forest": {"landuse": "forest", "natural": "wood"},
+    "meadow": {"landuse": ["meadow", "village_green"]},
+    "grassland": {"natural": "grassland"},
+    "water": {"natural": "water", "waterway": "river"},
+    "nature_reserve": {"leisure": "nature_reserve", "boundary": "protected_area"},
 }
